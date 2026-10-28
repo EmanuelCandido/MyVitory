@@ -17,7 +17,15 @@ data class AppSettings(
     val todayReminderMinutes: Int = 17 * 60 + 30,
     /** Às 9h, pergunta se treinou ontem quando o dia ficou sem registro. */
     val yesterdayQuestion: Boolean = false,
-)
+    /** Iniciante: +24 h de descanso em cada músculo (recálculo e Recuperação). */
+    val beginner: Boolean = false,
+) {
+    val extraRecoveryHours get() = if (beginner) BEGINNER_EXTRA_HOURS else 0
+
+    companion object {
+        const val BEGINNER_EXTRA_HOURS = 24
+    }
+}
 
 private val Context.settingsStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -26,6 +34,7 @@ class SettingsRepository(private val context: Context) {
         val todayReminder = booleanPreferencesKey("today_reminder")
         val todayReminderMinutes = intPreferencesKey("today_reminder_minutes")
         val yesterdayQuestion = booleanPreferencesKey("yesterday_question")
+        val beginner = booleanPreferencesKey("beginner")
     }
 
     val settings: Flow<AppSettings> = context.settingsStore.data.map { p ->
@@ -34,6 +43,7 @@ class SettingsRepository(private val context: Context) {
             todayReminder = p[Keys.todayReminder] ?: defaults.todayReminder,
             todayReminderMinutes = p[Keys.todayReminderMinutes] ?: defaults.todayReminderMinutes,
             yesterdayQuestion = p[Keys.yesterdayQuestion] ?: defaults.yesterdayQuestion,
+            beginner = p[Keys.beginner] ?: defaults.beginner,
         )
     }
 
@@ -43,4 +53,6 @@ class SettingsRepository(private val context: Context) {
         context.settingsStore.edit { it[Keys.todayReminderMinutes] = minutes.coerceIn(0, 24 * 60 - 1) }
 
     suspend fun setYesterdayQuestion(on: Boolean) = context.settingsStore.edit { it[Keys.yesterdayQuestion] = on }
+
+    suspend fun setBeginner(on: Boolean) = context.settingsStore.edit { it[Keys.beginner] = on }
 }

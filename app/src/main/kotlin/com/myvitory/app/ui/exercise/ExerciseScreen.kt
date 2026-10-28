@@ -153,6 +153,8 @@ fun ExerciseScreen(
                     }
                 }
 
+                EvolutionSection(state.history)
+
                 if (state.alternatives.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(verticalAlignment = Alignment.Bottom) {

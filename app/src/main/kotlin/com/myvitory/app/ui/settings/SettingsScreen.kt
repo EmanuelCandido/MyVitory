@@ -151,6 +151,13 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             Section("Treino")
             Card {
+                SwitchRow(
+                    title = "Sou iniciante",
+                    subtitle = "Mais 24 h de descanso para cada músculo no recálculo da semana e na Recuperação.",
+                    checked = state.beginner,
+                    onChange = { on -> scope.launch { vm.setBeginner(on) } },
+                )
+                HorizontalDivider(color = Palette.SurfaceHigh)
                 InfoRow("Descanso na tela bloqueada", "A contagem aparece na notificação, com +15 s e Pular, e o celular vibra no fim.")
             }
 

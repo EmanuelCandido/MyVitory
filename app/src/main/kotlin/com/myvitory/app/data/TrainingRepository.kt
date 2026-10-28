@@ -2,6 +2,7 @@ package com.myvitory.app.data
 
 import androidx.room.withTransaction
 import com.myvitory.app.data.db.ExerciseEntity
+import com.myvitory.app.data.db.ExerciseHistoryPoint
 import com.myvitory.app.data.db.MyVitoryDatabase
 import com.myvitory.app.data.db.PlanDayEntity
 import com.myvitory.app.data.db.SessionEntity
@@ -9,7 +10,11 @@ import com.myvitory.app.data.db.SetLogEntity
 import com.myvitory.app.data.db.TemplateEntity
 import com.myvitory.app.data.db.TemplateItemEntity
 import com.myvitory.app.data.db.TemplateItemRow
+import com.myvitory.app.data.db.UnavailableDayEntity
 import com.myvitory.app.domain.DayState
+import com.myvitory.app.domain.DoneSet
+import com.myvitory.app.domain.LoadSuggestion
+import com.myvitory.app.domain.Progression
 import com.myvitory.app.domain.SessionStatus
 import com.myvitory.app.domain.WeekLogic
 import java.time.DayOfWeek
@@ -25,6 +30,8 @@ data class DayView(
     val session: SessionEntity?,
     val exerciseCount: Int,
     val state: DayState,
+    /** A pessoa avisou que não pode treinar neste dia. */
+    val unavailable: Boolean = false,
 )
 
 data class WorkoutExercise(
@@ -34,6 +41,8 @@ data class WorkoutExercise(
     val sets: List<SetLogEntity>,
     /** Ex.: "140 kg × 10, 10, 9". Nulo quando é a primeira vez. */
     val lastTime: String?,
+    /** Carga subiu porque todas as repetições foram batidas na última vez. */
+    val suggestion: LoadSuggestion? = null,
 )
 
 data class WorkoutView(val session: SessionEntity, val exercises: List<WorkoutExercise>) {
@@ -55,6 +64,7 @@ class TrainingRepository(
     private val plan = db.plan()
     private val sessions = db.sessions()
     private val setLogs = db.setLogs()
+    private val availability = db.availability()
 
     private val seedLock = Mutex()
 
@@ -100,8 +110,10 @@ class TrainingRepository(
         combine(
             sessions.observeRange(weekStart, weekStart.plusDays(6)),
             templates.observeItemCounts(),
-        ) { weekSessions, counts ->
+            availability.observeRange(weekStart, weekStart.plusDays(6)),
+        ) { weekSessions, counts, blocked ->
             val byDate = weekSessions.associateBy { it.date }
+            val blockedDates = blocked.map { it.date }.toSet()
             val countByTemplate = counts.associate { it.templateId to it.count }
             WeekLogic.daysOf(weekStart).map { date ->
                 // Linha REST é só um descanso decidido: para a tela, o dia não tem treino.
@@ -110,7 +122,8 @@ class TrainingRepository(
                     date = date,
                     session = session,
                     exerciseCount = session?.templateId?.let { countByTemplate[it] } ?: 0,
-                    state = WeekLogic.dayState(date, today(), session?.status, moved = session?.movedTo != null),
+                    state = WeekLogic.dayState(date, today(), session?.status, moved = session?.movedTo != null, unavailable = date in blockedDates),
+                    unavailable = date in blockedDates,
                 )
             }
         }
@@ -121,13 +134,18 @@ class TrainingRepository(
 
     // ---- Treino em andamento ----
 
-    /** Na primeira vez cria as séries a partir do treino, já com a carga da última vez. */
+    /**
+     * Na primeira vez cria as séries a partir do treino, com a carga da última vez,
+     * ou um degrau acima quando todas as repetições foram batidas (progressão automática).
+     */
     suspend fun startWorkout(sessionId: Long) {
         val session = sessions.get(sessionId) ?: return
         if (setLogs.countForSession(sessionId) == 0) {
             val items = session.templateId?.let { templates.getItems(it) }.orEmpty()
+            val equipment = exercises.getAll().associate { it.id to it.equipment }
             val logs = items.flatMap { item ->
                 val last = setLogs.lastDone(item.exerciseId, session.date)
+                val suggestion = suggestionFor(last, item.reps, item.sets, equipment[item.exerciseId].orEmpty())
                 (0 until item.sets).map { index ->
                     val previous = last.getOrNull(index) ?: last.lastOrNull()
                     SetLogEntity(
@@ -135,7 +153,7 @@ class TrainingRepository(
                         exerciseId = item.exerciseId,
                         position = item.position,
                         setIndex = index,
-                        weightKg = previous?.weightKg ?: 0.0,
+                        weightKg = suggestion?.weightKg ?: previous?.weightKg ?: 0.0,
                         reps = item.reps,
                         restSec = item.restSec,
                     )
@@ -150,7 +168,11 @@ class TrainingRepository(
     }
 
     fun observeWorkout(sessionId: Long): Flow<WorkoutView?> {
-        val lastTimeCache = mutableMapOf<String, String?>()
+        // Histórico não muda durante o treino: calcula uma vez por exercício.
+        val historyCache = mutableMapOf<String, Pair<String?, LoadSuggestion?>>()
+        var targetCache: Map<String, Pair<Int, Int>>? = null
+        suspend fun targets(templateId: Long?): Map<String, Pair<Int, Int>> =
+            targetCache ?: templateId?.let { id -> templates.getItems(id).associate { it.exerciseId to (it.reps to it.sets) } }.orEmpty().also { targetCache = it }
         return combine(
             sessions.observe(sessionId),
             setLogs.observeForSession(sessionId),
@@ -166,10 +188,13 @@ class TrainingRepository(
                     session = session,
                     exercises = grouped.map { (key, sets) ->
                         val exerciseId = key.second
-                        val lastTime = lastTimeCache.getOrPut(exerciseId) {
-                            formatLastTime(setLogs.lastDone(exerciseId, session.date))
+                        val (lastTime, suggestion) = historyCache.getOrPut(exerciseId) {
+                            val last = setLogs.lastDone(exerciseId, session.date)
+                            val (reps, setCount) = targets(session.templateId)[exerciseId] ?: (sets.first().reps to sets.size)
+                            val equipment = catalog.firstOrNull { it.id == exerciseId }?.equipment.orEmpty()
+                            formatLastTime(last) to suggestionFor(last, reps, setCount, equipment)
                         }
-                        WorkoutExercise(exerciseId, names[exerciseId] ?: exerciseId, key.first, sets, lastTime)
+                        WorkoutExercise(exerciseId, names[exerciseId] ?: exerciseId, key.first, sets, lastTime, suggestion)
                     },
                 )
             }
@@ -224,6 +249,38 @@ class TrainingRepository(
     }
 
     fun observeExerciseIdsInPlans(): Flow<List<String>> = templates.observeExerciseIdsInPlans()
+
+    data class AvailabilityUndo(val date: LocalDate, val wasUnavailable: Boolean, val previous: SessionEntity?)
+
+    /**
+     * "Não vou poder treinar neste dia". Um treino planejado ali vira perdido (o recálculo encaixa em outro dia)
+     * e o dia deixa de ser usado pelo recálculo. Liberar o dia de novo devolve o treino se ninguém decidiu nada.
+     */
+    suspend fun setUnavailable(date: LocalDate, unavailable: Boolean): AvailabilityUndo = db.withTransaction {
+        val wasUnavailable = availability.getRange(date, date).isNotEmpty()
+        val session = sessions.getByDate(date)
+        if (unavailable) {
+            availability.add(UnavailableDayEntity(date))
+            if (session != null && session.status == SessionStatus.PLANNED && session.startedAt == null && session.templateId != null) {
+                sessions.update(session.copy(status = SessionStatus.MISSED, resolved = false, movedTo = null))
+            }
+        } else {
+            availability.remove(date)
+            if (session != null && session.status == SessionStatus.MISSED && !session.resolved && !date.isBefore(today())) {
+                sessions.update(session.copy(status = SessionStatus.PLANNED))
+            }
+        }
+        AvailabilityUndo(date, wasUnavailable, session)
+    }
+
+    suspend fun undoAvailability(undo: AvailabilityUndo) = db.withTransaction {
+        if (undo.wasUnavailable) availability.add(UnavailableDayEntity(undo.date)) else availability.remove(undo.date)
+        undo.previous?.let { sessions.update(it) }
+    }
+
+    /** Evolução do exercício em ordem cronológica (mais antigo primeiro), para o gráfico. */
+    fun observeHistory(exerciseId: String): Flow<List<ExerciseHistoryPoint>> =
+        setLogs.observeHistory(exerciseId).map { it.reversed() }
 
     /** Fecha o treino pelo que foi marcado. Nenhuma série marcada: não muda nada e devolve null. */
     suspend fun finishWorkout(sessionId: Long): SessionStatus? {
@@ -330,6 +387,9 @@ class TrainingRepository(
         sessions.deleteUntouchedFrom(date)
         ensureWeek(WeekLogic.weekStartOf(date))
     }
+
+    private fun suggestionFor(last: List<SetLogEntity>, targetReps: Int, targetSets: Int, equipment: String): LoadSuggestion? =
+        Progression.suggest(last.map { DoneSet(it.weightKg, it.reps) }, targetReps, targetSets, equipment)
 
     private fun formatLastTime(last: List<SetLogEntity>): String? {
         if (last.isEmpty()) return null

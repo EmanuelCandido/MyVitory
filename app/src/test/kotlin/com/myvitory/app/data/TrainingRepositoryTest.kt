@@ -145,6 +145,39 @@ class TrainingRepositoryTest {
     }
 
     @Test
+    fun `progressão sobe a carga quando o treino anterior foi completo`() = runBlocking {
+        repo.ensureWeek(monday)
+        val wednesday = sessionOn(monday.plusDays(2))
+        repo.startWorkout(wednesday.id)
+        val legPress = repo.observeWorkout(wednesday.id).first()!!.exercises[1] // Leg press 45°: 3 × 10
+        legPress.sets.forEach { repo.updateSet(it.copy(weightKg = 140.0, done = true)) }
+
+        val nextWeek = monday.plusWeeks(1)
+        today = nextWeek.plusDays(2)
+        repo.ensureWeek(nextWeek)
+        val next = sessionOn(nextWeek.plusDays(2))
+        repo.startWorkout(next.id)
+        val nextLegPress = repo.observeWorkout(next.id).first()!!.exercises[1]
+        assertTrue(nextLegPress.sets.all { it.weightKg == 142.5 })
+        assertEquals(2.5, nextLegPress.suggestion!!.increaseKg, 0.0)
+        // Agachamento não foi feito na semana anterior: sem sugestão.
+        assertNull(repo.observeWorkout(next.id).first()!!.exercises[0].suggestion)
+    }
+
+    @Test
+    fun `histórico do exercício em ordem cronológica`() = runBlocking {
+        repo.ensureWeek(monday)
+        val wednesday = sessionOn(monday.plusDays(2))
+        repo.startWorkout(wednesday.id)
+        val legPress = repo.observeWorkout(wednesday.id).first()!!.exercises[1]
+        legPress.sets.forEachIndexed { i, s -> repo.updateSet(s.copy(weightKg = 130.0 + i * 5, done = true)) }
+        val history = repo.observeHistory("leg_press_45").first()
+        assertEquals(1, history.size)
+        assertEquals(140.0, history.single().topKg, 0.0)
+        assertEquals((130 + 135 + 140) * 10.0, history.single().volumeKg, 0.0)
+    }
+
+    @Test
     fun `trocar no plano todo vale para as próximas semanas`() = runBlocking {
         repo.ensureWeek(monday)
         val wednesday = sessionOn(monday.plusDays(2))

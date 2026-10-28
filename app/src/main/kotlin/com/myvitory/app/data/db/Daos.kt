@@ -92,6 +92,8 @@ interface TemplateDao {
 
 data class TemplateCount(val templateId: Long, val count: Int)
 
+data class ExerciseHistoryPoint(val date: LocalDate, val topKg: Double, val volumeKg: Double, val reps: String)
+
 @Dao
 interface PlanDao {
     @Query("SELECT * FROM plan_days ORDER BY dayOfWeek")
@@ -163,6 +165,16 @@ interface SetLogDao {
     @Query("SELECT DISTINCT exerciseId FROM set_logs WHERE sessionId = :sessionId AND done = 1")
     suspend fun doneExerciseIds(sessionId: Long): List<String>
 
+    /** Um ponto por treino com o exercício: maior carga, volume e repetições feitas, do mais recente ao mais antigo. */
+    @Query(
+        """SELECT s.date AS date, MAX(l.weightKg) AS topKg, SUM(l.weightKg * l.reps) AS volumeKg,
+                  GROUP_CONCAT(l.reps, ', ') AS reps
+           FROM set_logs l JOIN sessions s ON s.id = l.sessionId
+           WHERE l.exerciseId = :exerciseId AND l.done = 1
+           GROUP BY s.id ORDER BY s.date DESC LIMIT :limit"""
+    )
+    fun observeHistory(exerciseId: String, limit: Int = 16): Flow<List<ExerciseHistoryPoint>>
+
     @Query("SELECT * FROM set_logs WHERE sessionId = :sessionId")
     suspend fun getForSession(sessionId: Long): List<SetLogEntity>
 
@@ -209,4 +221,19 @@ interface VideoDao {
 
     @Query("DELETE FROM pinned_videos WHERE exerciseId = :exerciseId")
     suspend fun unpin(exerciseId: String)
+}
+
+@Dao
+interface AvailabilityDao {
+    @Query("SELECT * FROM unavailable_days WHERE date BETWEEN :from AND :to")
+    fun observeRange(from: LocalDate, to: LocalDate): Flow<List<UnavailableDayEntity>>
+
+    @Query("SELECT * FROM unavailable_days WHERE date BETWEEN :from AND :to")
+    suspend fun getRange(from: LocalDate, to: LocalDate): List<UnavailableDayEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun add(day: UnavailableDayEntity)
+
+    @Query("DELETE FROM unavailable_days WHERE date = :date")
+    suspend fun remove(date: LocalDate)
 }

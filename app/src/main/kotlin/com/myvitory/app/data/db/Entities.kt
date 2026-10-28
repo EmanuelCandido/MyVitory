@@ -113,3 +113,7 @@ data class PinnedVideoEntity(
     val title: String,
     val channel: String,
 )
+
+/** Dia em que a pessoa avisou que não pode treinar (viagem, compromisso). O recálculo não usa esse dia. */
+@Entity(tableName = "unavailable_days")
+data class UnavailableDayEntity(@PrimaryKey val date: LocalDate)

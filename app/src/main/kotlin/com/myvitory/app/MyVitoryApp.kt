@@ -1,6 +1,7 @@
 package com.myvitory.app
 
 import android.app.Application
+import androidx.work.Configuration
 import com.myvitory.app.data.CoachRepository
 import com.myvitory.app.data.TrainingRepository
 import com.myvitory.app.data.db.MyVitoryDatabase
@@ -14,6 +15,7 @@ import com.myvitory.app.timer.RestTimerHandle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /** O que os ViewModels recebem. */
@@ -29,17 +31,21 @@ class AppContainer(
  * Injeção manual: um banco, repositórios e dois serviços do sistema, sem framework.
  * Continua pequeno o bastante para não justificar Hilt.
  */
-class MyVitoryApp : Application() {
+class MyVitoryApp : Application(), Configuration.Provider {
     val appScope = CoroutineScope(SupervisorJob())
+
+    // WorkManager inicializa sob demanda na primeira chamada (o inicializador automático foi removido no manifesto).
+    override val workManagerConfiguration: Configuration get() = Configuration.Builder().build()
 
     val container: AppContainer by lazy {
         val db = MyVitoryDatabase.create(this)
         val api = YouTubeApi(BuildConfig.YOUTUBE_API_KEY, packageName, AppSignature.sha1(this))
+        val settings = SettingsRepository(this)
         AppContainer(
             training = TrainingRepository(db),
-            coach = CoachRepository(db),
+            coach = CoachRepository(db, extraRecoveryHours = { settings.settings.first().extraRecoveryHours }),
             videos = VideoRepository(db, api),
-            settings = SettingsRepository(this),
+            settings = settings,
             restTimer = RestTimerHandle(this),
         )
     }

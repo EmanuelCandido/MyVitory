@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.myvitory.app.data.CoachRepository
 import com.myvitory.app.data.TodayLoads
+import com.myvitory.app.data.settings.SettingsRepository
 import com.myvitory.app.domain.MuscleRecovery
 import com.myvitory.app.domain.PRIMARY_LOAD
 import kotlinx.coroutines.delay
@@ -18,6 +19,7 @@ data class RecoveryUiState(
     val nowMillis: Long = 0,
     val muscles: List<MuscleRecovery> = emptyList(),
     val today: TodayLoads? = null,
+    val beginner: Boolean = false,
 ) {
     val recovering get() = muscles.filter { !it.ready }.sortedBy { it.percent }
     val ready get() = muscles.filter { it.ready }
@@ -28,7 +30,7 @@ data class RecoveryUiState(
     }.orEmpty()
 }
 
-class RecoveryViewModel(private val coach: CoachRepository) : ViewModel() {
+class RecoveryViewModel(private val coach: CoachRepository, settings: SettingsRepository) : ViewModel() {
     /** A porcentagem muda com o tempo, então recalcula a cada minuto mesmo sem treino novo. */
     private val ticker = flow {
         while (true) {
@@ -38,7 +40,13 @@ class RecoveryViewModel(private val coach: CoachRepository) : ViewModel() {
     }
 
     val state: StateFlow<RecoveryUiState> =
-        combine(coach.observeRecoveryEvents(), coach.observeTodayLoads(), ticker) { events, today, _ ->
-            RecoveryUiState(loading = false, nowMillis = coach.now(), muscles = coach.recoveryNow(events), today = today)
+        combine(coach.observeRecoveryEvents(), coach.observeTodayLoads(), settings.settings, ticker) { events, today, prefs, _ ->
+            RecoveryUiState(
+                loading = false,
+                nowMillis = coach.now(),
+                muscles = coach.recoveryNow(events, prefs.extraRecoveryHours),
+                today = today,
+                beginner = prefs.beginner,
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RecoveryUiState())
 }

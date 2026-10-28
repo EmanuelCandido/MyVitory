@@ -6,6 +6,7 @@ import com.myvitory.app.data.ExerciseTips
 import com.myvitory.app.data.TrainingRepository
 import com.myvitory.app.data.db.CachedVideoEntity
 import com.myvitory.app.data.db.ExerciseEntity
+import com.myvitory.app.data.db.ExerciseHistoryPoint
 import com.myvitory.app.data.db.PinnedVideoEntity
 import com.myvitory.app.data.video.VideoError
 import com.myvitory.app.data.video.VideoRepository
@@ -51,6 +52,7 @@ data class ExerciseUiState(
     /** Aberto a partir do treino em andamento: mostra "Trocar por". */
     val canSwap: Boolean = false,
     val swapInPlan: Boolean = false,
+    val history: List<ExerciseHistoryPoint> = emptyList(),
 ) {
     val current: VideoItem? get() = videos.getOrNull(selected)
 }
@@ -76,7 +78,8 @@ class ExerciseViewModel(
         combine(catalog, videoList, search, selected) { all, list, s, sel -> Quad(all, list, s, sel) },
         canSwap,
         swapInPlan,
-    ) { (all, list, s, sel), swap, inPlan ->
+        training.observeHistory(exerciseId),
+    ) { (all, list, s, sel), swap, inPlan, history ->
         val exercise = all.firstOrNull { it.id == exerciseId }
         ExerciseUiState(
             exercise = exercise,
@@ -89,6 +92,7 @@ class ExerciseViewModel(
             alternatives = exercise?.let { alternativesFor(it, all) }.orEmpty(),
             canSwap = swap,
             swapInPlan = inPlan,
+            history = history,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseUiState())
 

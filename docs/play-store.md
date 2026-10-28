@@ -29,7 +29,7 @@ keyPassword=SENHA_DA_CHAVE
 ```
 
 Sai em `app/build/outputs/bundle/release/app-release.aab`. Antes de cada novo envio, aumente `versionCode`
-em `app/build.gradle.kts` (hoje: 4, versão 0.4.0).
+em `app/build.gradle.kts` (hoje: 5, versão 0.5.0).
 
 Se a busca de vídeos deve funcionar no beta, gere o pacote com `youtube.apiKey` em `local.properties` e, no Google Cloud,
 adicione à restrição da chave o **SHA-1 da chave de assinatura do app** (Play Console › Configuração › Integridade do app),

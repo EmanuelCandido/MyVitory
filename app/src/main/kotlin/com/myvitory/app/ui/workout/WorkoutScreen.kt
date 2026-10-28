@@ -290,6 +290,13 @@ private fun ExerciseCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = Palette.TextMuted,
                 )
+                exercise.suggestion?.let { s ->
+                    Text(
+                        "↑ +${formatKg(s.increaseKg)} kg hoje: você bateu todas as repetições da última vez",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Palette.Lime,
+                    )
+                }
             }
             // A tela do exercício tem o vídeo e, quando há séries abertas, a lista "Trocar por".
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
