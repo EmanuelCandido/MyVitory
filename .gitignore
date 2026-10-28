@@ -1,0 +1,14 @@
+.gradle/
+.kotlin/
+build/
+/local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+# Assinatura de release: nunca no git
+keystore.properties
+*.jks
+*.keystore
