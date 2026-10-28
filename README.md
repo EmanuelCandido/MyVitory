@@ -42,6 +42,14 @@ O app guarda cada busca por 7 dias e só busca de novo quando você pede.
 - **Dias indisponíveis:** em Semana, toque num dia e escolha "Não vou poder treinar neste dia". O recálculo deixa
   esse dia de fora e, se havia treino nele, propõe onde encaixar.
 - **Nível iniciante:** em Ajustes, soma 24 h de descanso a cada músculo.
+- **Treino fundido:** quando não sobra dia bom na semana, o recálculo pode juntar o treino perdido com outro do
+  mesmo músculo principal (até 10 exercícios), com uma série a menos em cada exercício.
+
+## Widget e vídeo
+
+- **Widget "Treino de hoje"** (segure na tela inicial › Widgets › MyVitory): mostra o treino do dia com o botão
+  Começar/Continuar, o próximo treino nos dias de descanso e "Reorganizar a semana" quando o dia não vai dar.
+- **Vídeo em tela cheia:** o botão de tela cheia do player abre o vídeo em paisagem.
 
 ## Notificações
 

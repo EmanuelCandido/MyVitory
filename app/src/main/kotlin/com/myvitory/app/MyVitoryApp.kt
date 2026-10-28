@@ -11,7 +11,9 @@ import com.myvitory.app.data.video.VideoRepository
 import com.myvitory.app.data.video.YouTubeApi
 import com.myvitory.app.notify.Notifications
 import com.myvitory.app.notify.ReminderWorker
+import com.myvitory.app.domain.WeekLogic
 import com.myvitory.app.timer.RestTimerHandle
+import com.myvitory.app.widget.TodayWidget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -54,6 +56,13 @@ class MyVitoryApp : Application(), Configuration.Provider {
         super.onCreate()
         Notifications.createChannels(this)
         appScope.launch { container.training.seedIfEmpty() }
+        // Widget acompanha a semana: marcar, começar ou recalcular atualiza a tela inicial.
+        appScope.launch {
+            val training = container.training
+            training.observeWeek(WeekLogic.weekStartOf(training.today()))
+                .distinctUntilChanged()
+                .collect { TodayWidget.refresh(this@MyVitoryApp) }
+        }
         // Reagenda os lembretes a cada abertura e a cada mudança nos ajustes (mantém o horário alinhado).
         appScope.launch {
             container.settings.settings.distinctUntilChanged().collect { ReminderWorker.schedule(this@MyVitoryApp, it) }

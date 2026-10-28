@@ -14,7 +14,13 @@ data class Workout(
     val loads: MuscleLoads,
     val originalDate: LocalDate,
     val missed: Boolean,
-)
+    val exerciseCount: Int = 0,
+    /** Treino perdido que foi fundido a este: os dois num dia só, com menos séries por exercício. */
+    val mergedWith: Workout? = null,
+) {
+    /** Este treino cobre [other]: é ele, ou [other] foi fundido a ele. */
+    fun covers(other: Workout) = sessionId == other.sessionId || mergedWith?.sessionId == other.sessionId
+}
 
 /** Um treino com data fixa: já feito (histórico) ou do plano da semana seguinte. */
 data class Training(val date: LocalDate, val name: String, val loads: MuscleLoads)
@@ -32,7 +38,7 @@ data class PlannerInput(
 )
 
 data class Proposal(val assignment: Map<LocalDate, Workout>, val dropped: List<Workout>, val cost: Double) {
-    fun dateOf(workout: Workout): LocalDate? = assignment.entries.firstOrNull { it.value.sessionId == workout.sessionId }?.key
+    fun dateOf(workout: Workout): LocalDate? = assignment.entries.firstOrNull { it.value.covers(workout) }?.key
 }
 
 /** Resultado do recálculo: a melhor proposta e, quando faz sentido, uma alternativa de outro tipo. */
@@ -45,6 +51,9 @@ data class ReplanResult(val best: Proposal, val alternative: Proposal?)
  * (cada treino num dia livre diferente ou fora da semana) e escolher a de menor custo.
  * Descanso entre treinos do mesmo músculo é custo alto, não regra rígida: muitas divisões
  * reais já repetem músculos com folga curta, e o plano original não pode virar "inválido".
+ *
+ * Quando não há dia bom sobrando, um treino perdido pode ser fundido a outro parecido (mesmo músculo
+ * principal), com menos séries por exercício: custa menos que perder o treino inteiro.
  */
 object Planner {
     const val SHORTFALL_PER_HOUR = 2.0
@@ -53,6 +62,8 @@ object Planner {
     const val STREAK_PER_DAY = 30.0
     const val DROP_BASE = 100.0
     const val DROP_PER_LOAD_DAY = 10.0
+    const val MERGE = 45.0
+    const val MAX_MERGED_EXERCISES = 10
 
     fun replan(input: PlannerInput): ReplanResult {
         val slots = input.slots.sortedBy { it.date }
@@ -63,9 +74,10 @@ object Planner {
         val missed = input.pending.filter { it.missed }
 
         val assignment = LinkedHashMap<LocalDate, Workout>()
+        var pending = input.pending
         fun visit(index: Int) {
-            if (index == input.pending.size) {
-                val proposal = Proposal(LinkedHashMap(assignment), input.pending.filter { w -> assignment.values.none { it.sessionId == w.sessionId } }, cost(input, assignment))
+            if (index == pending.size) {
+                val proposal = Proposal(LinkedHashMap(assignment), input.pending.filter { w -> assignment.values.none { it.covers(w) } }, cost(input, assignment))
                 if (best == null || proposal.cost < best!!.cost) best = proposal
                 if (assignment.keys.none { it in restDates } && (bestNoRest == null || proposal.cost < bestNoRest!!.cost)) bestNoRest = proposal
                 val signature = missed.map { proposal.dateOf(it) }
@@ -73,7 +85,7 @@ object Planner {
                 if (current == null || proposal.cost < current.cost) bestByMissedPlacement[signature] = proposal
                 return
             }
-            val workout = input.pending[index]
+            val workout = pending[index]
             for (slot in slots) {
                 if (slot.date in assignment) continue
                 assignment[slot.date] = workout
@@ -82,7 +94,11 @@ object Planner {
             }
             visit(index + 1) // fora da semana
         }
-        visit(0)
+        // A lista original e uma variação para cada fusão possível (perdido + parecido).
+        (listOf(input.pending) + mergeVariants(input.pending)).forEach { variant ->
+            pending = variant
+            visit(0)
+        }
 
         val chosen = best!!
         val chosenSignature = missed.map { chosen.dateOf(it) }
@@ -93,14 +109,35 @@ object Planner {
         return ReplanResult(chosen, alternative)
     }
 
+    /** Para cada treino perdido, as fusões com outro treino pendente que trabalha o mesmo músculo principal. */
+    fun mergeVariants(pending: List<Workout>): List<List<Workout>> =
+        pending.filter { it.missed }.flatMap { missed ->
+            pending.filter { other -> other.sessionId != missed.sessionId && compatible(missed, other) }.map { other ->
+                val merged = other.copy(
+                    name = "${missed.name} + ${other.name}",
+                    loads = (missed.loads.keys + other.loads.keys).associateWith { m -> maxOf(missed.loads[m] ?: 0.0, other.loads[m] ?: 0.0) },
+                    exerciseCount = missed.exerciseCount + other.exerciseCount,
+                    mergedWith = missed,
+                )
+                pending.filter { it.sessionId != missed.sessionId && it.sessionId != other.sessionId } + merged
+            }
+        }
+
+    private fun compatible(a: Workout, b: Workout): Boolean {
+        if (a.mergedWith != null || b.mergedWith != null) return false
+        if (a.exerciseCount + b.exerciseCount > MAX_MERGED_EXERCISES) return false
+        val primaryA = a.loads.filterValues { it >= 1.0 }.keys
+        return b.loads.any { (m, load) -> load >= 1.0 && m in primaryA }
+    }
+
     fun cost(input: PlannerInput, assignment: Map<LocalDate, Workout>): Double {
         val restDates = input.slots.filter { it.preferredRest }.map { it.date }.toSet()
         var total = 0.0
-        val placed = assignment.values.map { it.sessionId }.toSet()
-        input.pending.filter { it.sessionId !in placed }.forEach { total += dropCost(it, input) }
+        input.pending.filter { w -> assignment.values.none { it.covers(w) } }.forEach { total += dropCost(it, input) }
         assignment.forEach { (date, workout) ->
             total += abs(daysBetween(workout.originalDate, date)) * MOVE_PER_DAY
             if (date in restDates) total += REST_DAY
+            if (workout.mergedWith != null) total += MERGE
         }
         val trainings = input.history + assignment.map { (date, w) -> Training(date, w.name, w.loads) } + input.nextWeek
         total += recoveryShortfallHours(trainings, input.recoveryHours) * SHORTFALL_PER_HOUR
@@ -166,7 +203,7 @@ object Planner {
         val changes = input.slots.sortedBy { it.date }.mapNotNull { slot ->
             val before = input.pending.firstOrNull { !it.missed && it.originalDate == slot.date }
             val after = proposal.assignment[slot.date]
-            if (before?.sessionId == after?.sessionId) return@mapNotNull null
+            if (before?.sessionId == after?.sessionId && after?.mergedWith == null) return@mapNotNull null
             DayChange(
                 date = slot.date,
                 before = before,

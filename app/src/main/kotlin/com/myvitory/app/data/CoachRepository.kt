@@ -72,7 +72,7 @@ class CoachRepository(
     suspend fun sessionLoads(session: SessionEntity): MuscleLoads {
         val done = setLogs.doneExerciseIds(session.id)
         if (done.isNotEmpty()) return loadsFor(done)
-        return session.templateId?.let { templateLoads(it) }.orEmpty()
+        return mergeLoads(session.templateId?.let { templateLoads(it) }.orEmpty(), session.mergedTemplateId?.let { templateLoads(it) }.orEmpty())
     }
 
     // ---- Recálculo ----
@@ -118,8 +118,9 @@ class CoachRepository(
             val template = templates.getTemplate(templateId) ?: return@mapNotNull null
             Training(d, template.name, templateLoads(templateId))
         }
-        val pending = missed.map { Workout(it.id, it.templateId!!, it.name, templateLoads(it.templateId), it.date, missed = true) } +
-            upcoming.map { Workout(it.id, it.templateId!!, it.name, templateLoads(it.templateId), it.date, missed = false) }
+        suspend fun workout(s: SessionEntity, missed: Boolean) =
+            Workout(s.id, s.templateId!!, s.name, templateLoads(s.templateId), s.date, missed, exerciseCount = templates.getItems(s.templateId).size)
+        val pending = missed.map { workout(it, missed = true) } + upcoming.map { workout(it, missed = false) }
 
         val extra = extraRecoveryHours()
         val input = PlannerInput(pending = pending, slots = slots, history = history, nextWeek = nextWeek, recoveryHours = { it.recoveryHours + extra })
@@ -138,11 +139,21 @@ class CoachRepository(
             val workout = proposal.assignment[slot.date]
             when {
                 workout != null && row != null ->
-                    sessions.update(row.copy(templateId = workout.templateId, name = workout.name, status = SessionStatus.PLANNED))
+                    sessions.update(
+                        row.copy(
+                            templateId = workout.templateId, mergedTemplateId = workout.mergedWith?.templateId,
+                            name = workout.name, status = SessionStatus.PLANNED,
+                        )
+                    )
                 workout != null ->
-                    inserted += sessions.insert(SessionEntity(date = slot.date, templateId = workout.templateId, name = workout.name, status = SessionStatus.PLANNED))
+                    inserted += sessions.insert(
+                        SessionEntity(
+                            date = slot.date, templateId = workout.templateId, mergedTemplateId = workout.mergedWith?.templateId,
+                            name = workout.name, status = SessionStatus.PLANNED,
+                        )
+                    )
                 row != null ->
-                    sessions.update(row.copy(templateId = null, name = REST_NAME, status = SessionStatus.REST))
+                    sessions.update(row.copy(templateId = null, mergedTemplateId = null, name = REST_NAME, status = SessionStatus.REST))
                 planMap[slot.date.dayOfWeek] != null ->
                     inserted += sessions.insert(SessionEntity(date = slot.date, templateId = null, name = REST_NAME, status = SessionStatus.REST))
             }
@@ -183,7 +194,7 @@ class CoachRepository(
         val date = today()
         return sessions.observeRange(date, date).map { rows ->
             val session = rows.firstOrNull()?.takeIf { it.status == SessionStatus.PLANNED && it.templateId != null }
-            session?.let { TodayLoads(it, templateLoads(it.templateId!!)) }
+            session?.let { TodayLoads(it, mergeLoads(templateLoads(it.templateId!!), it.mergedTemplateId?.let { id -> templateLoads(id) }.orEmpty())) }
         }
     }
 
@@ -192,6 +203,9 @@ class CoachRepository(
         session.finishedAt ?: session.startedAt ?: session.date.atTime(DEFAULT_TRAINING_TIME).atZone(zone).toInstant().toEpochMilli()
 
     fun now(): Long = clock()
+
+    private fun mergeLoads(a: MuscleLoads, b: MuscleLoads): MuscleLoads =
+        (a.keys + b.keys).associateWith { maxOf(a[it] ?: 0.0, b[it] ?: 0.0) }
 
     companion object {
         const val REST_NAME = "Descanso"

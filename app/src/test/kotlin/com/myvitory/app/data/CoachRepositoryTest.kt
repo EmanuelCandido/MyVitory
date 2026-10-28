@@ -117,6 +117,32 @@ class CoachRepositoryTest {
     }
 
     @Test
+    fun `sem fim de semana, aplica treino fundido com séries reduzidas`() = runBlocking {
+        training.setUnavailable(monday.plusDays(5), true)
+        training.setUnavailable(monday.plusDays(6), true)
+        val data = coach.buildReplan()!!
+        val best = data.result.best
+        assertTrue(best.dropped.isEmpty())
+        val mergedDate = best.assignment.entries.single { it.value.mergedWith != null }.key
+
+        coach.apply(data, best)
+        val day = week().first { it.date == mergedDate }
+        val session = day.session!!
+        assertEquals("Pernas + Posterior + Glúteos", session.name)
+        assertNotNull(session.mergedTemplateId)
+        assertEquals(mergedDate, week()[2].session?.movedTo)
+        assertEquals(9, day.exerciseCount) // 5 + 5, mesa flexora nos dois conta uma vez
+
+        training.startWorkout(session.id)
+        val workout = training.observeWorkout(session.id).first()!!
+        assertEquals(9, workout.exercises.size)
+        assertEquals(1, workout.exercises.count { it.exerciseId == "mesa_flexora" })
+        // Uma série a menos em cada exercício, nunca abaixo de 2: stiff 4 → 3, cadeira abdutora 3 → 2.
+        assertEquals(3, workout.exercises.first { it.exerciseId == "stiff" }.sets.size)
+        assertEquals(2, workout.exercises.first { it.exerciseId == "cadeira_abdutora" }.sets.size)
+    }
+
+    @Test
     fun `nível iniciante soma 24 h nas janelas`() = runBlocking {
         val beginner = CoachRepository(db, today = { today }, clock = { nowMillis }, zone = ZoneOffset.UTC, extraRecoveryHours = { 24 })
         val data = beginner.buildReplan()!!

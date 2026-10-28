@@ -109,19 +109,23 @@ class TrainingRepository(
     fun observeWeek(weekStart: LocalDate): Flow<List<DayView>> =
         combine(
             sessions.observeRange(weekStart, weekStart.plusDays(6)),
-            templates.observeItemCounts(),
+            templates.observeTemplateExercises(),
             availability.observeRange(weekStart, weekStart.plusDays(6)),
-        ) { weekSessions, counts, blocked ->
+        ) { weekSessions, items, blocked ->
             val byDate = weekSessions.associateBy { it.date }
             val blockedDates = blocked.map { it.date }.toSet()
-            val countByTemplate = counts.associate { it.templateId to it.count }
+            val exercisesByTemplate = items.groupBy({ it.templateId }, { it.exerciseId }).mapValues { it.value.toSet() }
             WeekLogic.daysOf(weekStart).map { date ->
                 // Linha REST é só um descanso decidido: para a tela, o dia não tem treino.
                 val session = byDate[date]?.takeIf { it.status != SessionStatus.REST }
                 DayView(
                     date = date,
                     session = session,
-                    exerciseCount = session?.templateId?.let { countByTemplate[it] } ?: 0,
+                    // Treino fundido: exercício que aparece nos dois treinos conta uma vez só.
+                    exerciseCount = (
+                        session?.templateId?.let { exercisesByTemplate[it] }.orEmpty() +
+                            session?.mergedTemplateId?.let { exercisesByTemplate[it] }.orEmpty()
+                        ).size,
                     state = WeekLogic.dayState(date, today(), session?.status, moved = session?.movedTo != null, unavailable = date in blockedDates),
                     unavailable = date in blockedDates,
                 )
@@ -135,13 +139,33 @@ class TrainingRepository(
     // ---- Treino em andamento ----
 
     /**
+     * Exercícios de uma sessão. Num treino fundido entram os dois treinos, sem repetir exercício,
+     * com uma série a menos em cada um (mínimo de 2): o volume total cabe num dia.
+     */
+    private suspend fun itemsFor(session: SessionEntity): List<TemplateItemEntity> {
+        val main = session.templateId?.let { templates.getItems(it) }.orEmpty()
+        val mergedId = session.mergedTemplateId ?: return main
+        val offset = (main.maxOfOrNull { it.position } ?: -1) + 1
+        val extra = templates.getItems(mergedId).filter { item -> main.none { it.exerciseId == item.exerciseId } }
+        return (main + extra.map { it.copy(position = it.position + offset) }).map { it.copy(sets = mergedSets(it.sets)) }
+    }
+
+    /** Prévia da tela Hoje, já com a fusão. */
+    fun observeSessionItems(templateId: Long, mergedTemplateId: Long?): Flow<List<TemplateItemRow>> {
+        if (mergedTemplateId == null) return templates.observeItems(templateId)
+        return combine(templates.observeItems(templateId), templates.observeItems(mergedTemplateId)) { main, extra ->
+            (main + extra.filter { e -> main.none { it.exerciseId == e.exerciseId } }).map { it.copy(sets = mergedSets(it.sets)) }
+        }
+    }
+
+    /**
      * Na primeira vez cria as séries a partir do treino, com a carga da última vez,
      * ou um degrau acima quando todas as repetições foram batidas (progressão automática).
      */
     suspend fun startWorkout(sessionId: Long) {
         val session = sessions.get(sessionId) ?: return
         if (setLogs.countForSession(sessionId) == 0) {
-            val items = session.templateId?.let { templates.getItems(it) }.orEmpty()
+            val items = itemsFor(session)
             val equipment = exercises.getAll().associate { it.id to it.equipment }
             val logs = items.flatMap { item ->
                 val last = setLogs.lastDone(item.exerciseId, session.date)
@@ -171,8 +195,8 @@ class TrainingRepository(
         // Histórico não muda durante o treino: calcula uma vez por exercício.
         val historyCache = mutableMapOf<String, Pair<String?, LoadSuggestion?>>()
         var targetCache: Map<String, Pair<Int, Int>>? = null
-        suspend fun targets(templateId: Long?): Map<String, Pair<Int, Int>> =
-            targetCache ?: templateId?.let { id -> templates.getItems(id).associate { it.exerciseId to (it.reps to it.sets) } }.orEmpty().also { targetCache = it }
+        suspend fun targets(session: SessionEntity): Map<String, Pair<Int, Int>> =
+            targetCache ?: itemsFor(session).associate { it.exerciseId to (it.reps to it.sets) }.also { targetCache = it }
         return combine(
             sessions.observe(sessionId),
             setLogs.observeForSession(sessionId),
@@ -190,7 +214,7 @@ class TrainingRepository(
                         val exerciseId = key.second
                         val (lastTime, suggestion) = historyCache.getOrPut(exerciseId) {
                             val last = setLogs.lastDone(exerciseId, session.date)
-                            val (reps, setCount) = targets(session.templateId)[exerciseId] ?: (sets.first().reps to sets.size)
+                            val (reps, setCount) = targets(session)[exerciseId] ?: (sets.first().reps to sets.size)
                             val equipment = catalog.firstOrNull { it.id == exerciseId }?.equipment.orEmpty()
                             formatLastTime(last) to suggestionFor(last, reps, setCount, equipment)
                         }
@@ -398,6 +422,9 @@ class TrainingRepository(
         return if (weight > 0) "${formatKg(weight)} kg × $reps" else "$reps reps"
     }
 }
+
+/** Séries de cada exercício num treino fundido. */
+fun mergedSets(sets: Int) = (sets - 1).coerceAtLeast(2)
 
 fun formatKg(kg: Double): String =
     if (kg % 1.0 == 0.0) kg.toInt().toString() else "%.1f".format(kg).replace('.', ',')

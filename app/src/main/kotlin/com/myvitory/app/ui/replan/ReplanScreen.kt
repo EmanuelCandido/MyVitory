@@ -204,7 +204,8 @@ private fun ChangeCard(change: Planner.DayChange) {
                         style = MaterialTheme.typography.headlineSmall.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize * 1.1f),
                         color = if (change.after == null) Palette.TextMuted else Palette.Text,
                     )
-                    if (change.after?.missed == true) Tag("VEIO DE ${change.after.originalDate.dayOfWeek.short()}", background = Palette.Lime, content = Palette.Ground)
+                    if (change.after?.mergedWith != null) Tag("FUNDIDO", background = Palette.Lime, content = Palette.Ground)
+                    else if (change.after?.missed == true) Tag("VEIO DE ${change.after.originalDate.dayOfWeek.short()}", background = Palette.Lime, content = Palette.Ground)
                     if (change.usesRestDay) Tag("USA FOLGA", background = Palette.OrangeSoft, content = Palette.Orange)
                 }
                 Text(
@@ -220,6 +221,9 @@ private fun ChangeCard(change: Planner.DayChange) {
 
 private fun reasonText(change: Planner.DayChange): String {
     val after = change.after ?: return "Treino saiu deste dia: vira descanso."
+    after.mergedWith?.let { merged ->
+        return "${merged.name} (${merged.originalDate.dayOfWeek.short().lowercase()}) entra junto, com uma série a menos por exercício."
+    }
     val reason = change.reason
     val base = when {
         reason?.muscle == null -> "Músculos principais sem treino recente."

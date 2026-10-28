@@ -28,13 +28,14 @@ class MigrationTest {
         createVersion1()
 
         val db = Room.databaseBuilder(context, MyVitoryDatabase::class.java, name)
-            .addMigrations(MyVitoryDatabase.MIGRATION_1_2, MyVitoryDatabase.MIGRATION_2_3, MyVitoryDatabase.MIGRATION_3_4)
+            .addMigrations(MyVitoryDatabase.MIGRATION_1_2, MyVitoryDatabase.MIGRATION_2_3, MyVitoryDatabase.MIGRATION_3_4, MyVitoryDatabase.MIGRATION_4_5)
             .allowMainThreadQueries()
             .build()
         val session = db.sessions().get(1)!!
         assertEquals("Pernas", session.name)
         assertFalse(session.resolved)
         assertNull(session.movedTo)
+        assertNull(session.mergedTemplateId)
         // Tabelas da Fase 3 existem e funcionam.
         db.videos().pin(PinnedVideoEntity("leg_press_45", "dQw4w9WgXcQ", "Vídeo", "Canal"))
         assertEquals(0, db.videos().cached("leg press").size)
