@@ -112,7 +112,9 @@ fun WeekScreen(
             )
             Column(Modifier.padding(horizontal = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 state.days.forEach { day ->
-                    DayRow(day, isToday = day.date == state.today, onClick = { if (day.session != null) daySheet = day })
+                    // Dias passados só abrem com treino; de hoje em diante qualquer dia abre (para avisar indisponibilidade).
+                    val canOpen = day.session != null || !day.date.isBefore(state.today)
+                    DayRow(day, isToday = day.date == state.today, enabled = canOpen, onClick = { daySheet = day })
                 }
             }
         } else {
@@ -127,16 +129,27 @@ fun WeekScreen(
     }
 
     daySheet?.let { day ->
-        val session = day.session ?: return@let
+        val session = day.session
         DayActionsSheet(
             day = day,
-            canOpen = !day.date.isAfter(state.today),
-            onOpen = { daySheet = null; onOpenWorkout(session.id) },
+            isPastOrToday = !day.date.isAfter(state.today),
+            canChangeAvailability = !day.date.isBefore(state.today),
+            onOpen = { daySheet = null; session?.let { onOpenWorkout(it.id) } },
             onMark = { status, message ->
                 daySheet = null
-                vm.mark(session, status) { revert ->
-                    undo.show(message, revert)
-                    if (status == SessionStatus.MISSED && !day.date.isBefore(state.weekStart)) onOpenReplan()
+                session?.let {
+                    vm.mark(it, status) { revert ->
+                        undo.show(message, revert)
+                        if (status == SessionStatus.MISSED && !day.date.isBefore(state.weekStart)) onOpenReplan()
+                    }
+                }
+            },
+            onAvailability = { unavailable ->
+                daySheet = null
+                vm.setUnavailable(day.date, unavailable) { revert ->
+                    undo.show(if (unavailable) "Dia marcado como indisponível" else "Dia disponível de novo", revert)
+                    // Havia treino nesse dia: já propõe onde encaixar.
+                    if (unavailable && session?.status == SessionStatus.PLANNED) onOpenReplan()
                 }
             },
             onDismiss = { daySheet = null },
@@ -171,7 +184,7 @@ private fun DayLabel(top: String, bottom: String, modifier: Modifier = Modifier)
 }
 
 @Composable
-private fun DayRow(day: DayView, isToday: Boolean, onClick: () -> Unit) {
+private fun DayRow(day: DayView, isToday: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val session = day.session
     Row(
         Modifier
@@ -179,7 +192,7 @@ private fun DayRow(day: DayView, isToday: Boolean, onClick: () -> Unit) {
             .heightIn(min = 64.dp)
             .clip(RoundedCornerShape(16.dp))
             .then(if (isToday) Modifier.background(Palette.Surface).border(1.5.dp, Palette.Line, RoundedCornerShape(16.dp)) else Modifier)
-            .clickable(enabled = session != null, onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             // "SEG 26" vira "Segunda, dia 26" no TalkBack, com o treino e o estado numa frase só.
             .semantics(mergeDescendants = true) {
                 contentDescription = listOfNotNull(
@@ -215,6 +228,7 @@ private fun DayRow(day: DayView, isToday: Boolean, onClick: () -> Unit) {
             when (day.state) {
                 DayState.DONE -> Tag(text, background = Palette.Lime, content = Palette.Ground)
                 DayState.PARTIAL -> Tag(text, background = Palette.SurfaceHigh, content = Palette.Lime)
+                DayState.UNAVAILABLE -> Tag(text, background = Palette.SurfaceHigh, content = Palette.TextMuted)
                 DayState.MISSED, DayState.UNMARKED, DayState.MOVED -> Tag(text, background = Palette.OrangeSoft, content = Palette.Orange)
                 DayState.TODAY -> Tag(text, background = Palette.Ground, content = Palette.Lime, modifier = Modifier.border(1.5.dp, Palette.Lime, RoundedCornerShape(8.dp)))
                 else -> Unit
@@ -299,12 +313,14 @@ private fun PlanBase(
 @Composable
 private fun DayActionsSheet(
     day: DayView,
-    canOpen: Boolean,
+    isPastOrToday: Boolean,
+    canChangeAvailability: Boolean,
     onOpen: () -> Unit,
     onMark: (SessionStatus, String) -> Unit,
+    onAvailability: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val session: SessionEntity = day.session ?: return
+    val session: SessionEntity? = day.session
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -312,16 +328,32 @@ private fun DayActionsSheet(
     ) {
         Column(Modifier.padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SectionLabel("${day.date.dayOfWeek.long()} · ${day.date.dayOfMonth.twoDigits()}/${day.date.monthValue.twoDigits()}")
-            Text(session.name, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 8.dp))
-            if (canOpen) SheetAction(R.drawable.ic_play, "Abrir treino", Palette.Lime, onOpen)
-            if (session.status != SessionStatus.DONE) {
-                SheetAction(R.drawable.ic_check, "Marcar como feito", Palette.Text) { onMark(SessionStatus.DONE, "Treino marcado como feito") }
+            Text(session?.name ?: "Descanso", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 8.dp))
+            if (session != null && isPastOrToday) {
+                SheetAction(R.drawable.ic_play, "Abrir treino", Palette.Lime, onOpen)
+                if (session.status != SessionStatus.DONE) {
+                    SheetAction(R.drawable.ic_check, "Marcar como feito", Palette.Text) { onMark(SessionStatus.DONE, "Treino marcado como feito") }
+                }
+                if (session.status != SessionStatus.MISSED) {
+                    SheetAction(R.drawable.ic_close, "Não treinei", Palette.Orange) { onMark(SessionStatus.MISSED, "Marcado como não treinado") }
+                }
+                if (session.status != SessionStatus.PLANNED && !day.unavailable) {
+                    SheetAction(R.drawable.ic_timer, "Voltar para planejado", Palette.TextMuted) { onMark(SessionStatus.PLANNED, "Treino voltou para planejado") }
+                }
             }
-            if (session.status != SessionStatus.MISSED) {
-                SheetAction(R.drawable.ic_close, "Não treinei", Palette.Orange) { onMark(SessionStatus.MISSED, "Marcado como não treinado") }
-            }
-            if (session.status != SessionStatus.PLANNED) {
-                SheetAction(R.drawable.ic_timer, "Voltar para planejado", Palette.TextMuted) { onMark(SessionStatus.PLANNED, "Treino voltou para planejado") }
+            if (canChangeAvailability) {
+                if (day.unavailable) {
+                    SheetAction(R.drawable.ic_calendar, "Estou disponível neste dia", Palette.Lime) { onAvailability(false) }
+                } else {
+                    SheetAction(R.drawable.ic_calendar, "Não vou poder treinar neste dia", Palette.TextMuted) { onAvailability(true) }
+                    Text(
+                        if (session?.status == SessionStatus.PLANNED) "O treino deste dia entra no recálculo da semana, e o dia fica de fora."
+                        else "O recálculo não vai usar este dia.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Palette.TextMuted,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
+                }
             }
         }
     }

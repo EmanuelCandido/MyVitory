@@ -37,6 +37,7 @@ fun DayState.label(): String? = when (this) {
     DayState.PARTIAL -> "Parcial"
     DayState.MISSED -> "Não feito"
     DayState.MOVED -> "Movido"
+    DayState.UNAVAILABLE -> "Indisponível"
     DayState.UNMARKED -> "Sem registro"
     DayState.TODAY -> "Hoje"
     DayState.PLANNED, DayState.REST -> null

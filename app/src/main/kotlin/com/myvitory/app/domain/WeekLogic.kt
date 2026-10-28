@@ -33,7 +33,19 @@ object WeekLogic {
         else -> SessionStatus.PARTIAL
     }
 
-    fun dayState(date: LocalDate, today: LocalDate, status: SessionStatus?, moved: Boolean = false): DayState = when (status) {
+    fun dayState(
+        date: LocalDate,
+        today: LocalDate,
+        status: SessionStatus?,
+        moved: Boolean = false,
+        unavailable: Boolean = false,
+    ): DayState = when {
+        // Feito vale mais que o aviso; o resto do dia indisponível aparece como indisponível.
+        unavailable && status != SessionStatus.DONE && status != SessionStatus.PARTIAL && !moved -> DayState.UNAVAILABLE
+        else -> stateOf(date, today, status, moved)
+    }
+
+    private fun stateOf(date: LocalDate, today: LocalDate, status: SessionStatus?, moved: Boolean): DayState = when (status) {
         null, SessionStatus.REST -> DayState.REST
         SessionStatus.DONE -> DayState.DONE
         SessionStatus.PARTIAL -> DayState.PARTIAL

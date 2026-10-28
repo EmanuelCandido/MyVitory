@@ -18,8 +18,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SetLogEntity::class,
         CachedVideoEntity::class,
         PinnedVideoEntity::class,
+        UnavailableDayEntity::class,
     ],
-    version = 3,
+    version = 4,
 )
 @TypeConverters(Converters::class)
 abstract class MyVitoryDatabase : RoomDatabase() {
@@ -29,6 +30,7 @@ abstract class MyVitoryDatabase : RoomDatabase() {
     abstract fun sessions(): SessionDao
     abstract fun setLogs(): SetLogDao
     abstract fun videos(): VideoDao
+    abstract fun availability(): AvailabilityDao
 
     companion object {
         /** Fase 2: recálculo da semana (treino movido e decisão tomada). */
@@ -55,9 +57,16 @@ abstract class MyVitoryDatabase : RoomDatabase() {
             }
         }
 
+        /** Fase 5: dias indisponíveis da semana. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `unavailable_days` (`date` INTEGER NOT NULL, PRIMARY KEY(`date`))")
+            }
+        }
+
         fun create(context: Context): MyVitoryDatabase =
             Room.databaseBuilder(context, MyVitoryDatabase::class.java, "myvitory.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
     }
 }

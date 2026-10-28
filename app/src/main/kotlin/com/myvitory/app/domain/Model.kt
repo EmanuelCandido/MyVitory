@@ -40,4 +40,4 @@ fun loadsOf(exercises: List<Pair<List<Muscle>, List<Muscle>>>): MuscleLoads {
 enum class SessionStatus { PLANNED, DONE, PARTIAL, MISSED, REST }
 
 /** Como um dia aparece na faixa da semana e na tela Semana. */
-enum class DayState { DONE, PARTIAL, MISSED, MOVED, TODAY, PLANNED, UNMARKED, REST }
+enum class DayState { DONE, PARTIAL, MISSED, MOVED, TODAY, PLANNED, UNMARKED, REST, UNAVAILABLE }

@@ -47,7 +47,7 @@ import java.time.ZoneId
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RecoveryScreen(contentPadding: PaddingValues) {
-    val vm = appViewModel { RecoveryViewModel(it.coach) }
+    val vm = appViewModel { RecoveryViewModel(it.coach, it.settings) }
     val state by vm.state.collectAsStateWithLifecycle()
 
     Column(
@@ -101,7 +101,8 @@ fun RecoveryScreen(contentPadding: PaddingValues) {
         }
 
         Text(
-            "Janelas: 72 h para grupos grandes, 48 h para ombros e braços, 24 h para abdômen e panturrilha. " +
+            (if (state.beginner) "Nível iniciante: +24 h em cada janela. " else "") +
+                "Janelas: 72 h para grupos grandes, 48 h para ombros e braços, 24 h para abdômen e panturrilha. " +
                 "Músculo usado só como apoio recupera na metade do tempo.",
             style = MaterialTheme.typography.bodySmall,
             color = Palette.TextFaint,

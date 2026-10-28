@@ -58,6 +58,13 @@ class WeekViewModel(private val repo: TrainingRepository) : ViewModel() {
         }
     }
 
+    fun setUnavailable(date: LocalDate, unavailable: Boolean, onDone: (undo: () -> Unit) -> Unit) {
+        viewModelScope.launch {
+            val undo = repo.setUnavailable(date, unavailable)
+            onDone { viewModelScope.launch { repo.undoAvailability(undo) } }
+        }
+    }
+
     fun setPlanDay(day: DayOfWeek, templateId: Long?) {
         viewModelScope.launch { repo.setPlanDay(day, templateId) }
     }

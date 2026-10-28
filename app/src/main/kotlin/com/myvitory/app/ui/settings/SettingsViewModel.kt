@@ -14,4 +14,6 @@ class SettingsViewModel(private val repo: SettingsRepository, val searchEnabled:
     suspend fun setTime(minutes: Int) = repo.setTodayReminderMinutes(minutes)
 
     suspend fun setYesterdayQuestion(on: Boolean) = repo.setYesterdayQuestion(on)
+
+    suspend fun setBeginner(on: Boolean) = repo.setBeginner(on)
 }

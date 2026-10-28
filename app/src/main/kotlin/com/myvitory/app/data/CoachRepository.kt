@@ -45,6 +45,8 @@ class CoachRepository(
     private val today: () -> LocalDate = { LocalDate.now() },
     private val clock: () -> Long = System::currentTimeMillis,
     private val zone: ZoneId = ZoneId.systemDefault(),
+    /** Horas a mais de descanso por músculo (nível iniciante). */
+    private val extraRecoveryHours: suspend () -> Int = { 0 },
 ) {
     private val sessions = db.sessions()
     private val templates = db.templates()
@@ -91,12 +93,13 @@ class CoachRepository(
 
         val planMap = plan.getPlan().associate { DayOfWeek.of(it.dayOfWeek) to it.templateId }
         val byDate = week.associateBy { it.date }
+        val blocked = db.availability().getRange(date, weekEnd).map { it.date }.toSet()
         val slots = mutableListOf<Slot>()
         val upcoming = mutableListOf<SessionEntity>()
         var day = date
         while (!day.isAfter(weekEnd)) {
             val row = byDate[day]
-            val free = when (row?.status) {
+            val free = day !in blocked && when (row?.status) {
                 null, SessionStatus.REST -> true
                 SessionStatus.PLANNED -> row.startedAt == null && setLogs.countForSession(row.id) == 0
                 else -> false
@@ -118,7 +121,8 @@ class CoachRepository(
         val pending = missed.map { Workout(it.id, it.templateId!!, it.name, templateLoads(it.templateId), it.date, missed = true) } +
             upcoming.map { Workout(it.id, it.templateId!!, it.name, templateLoads(it.templateId), it.date, missed = false) }
 
-        val input = PlannerInput(pending = pending, slots = slots, history = history, nextWeek = nextWeek)
+        val extra = extraRecoveryHours()
+        val input = PlannerInput(pending = pending, slots = slots, history = history, nextWeek = nextWeek, recoveryHours = { it.recoveryHours + extra })
         val result = withContext(Dispatchers.Default) { Planner.replan(input) }
         return ReplanData(missed, input, result)
     }
@@ -172,7 +176,8 @@ class CoachRepository(
             trained.map { TrainingEvent(eventTime(it), sessionLoads(it)) }
         }
 
-    fun recoveryNow(events: List<TrainingEvent>): List<MuscleRecovery> = Recovery.status(events, clock())
+    fun recoveryNow(events: List<TrainingEvent>, extraHours: Int = 0): List<MuscleRecovery> =
+        Recovery.status(events, clock()) { it.recoveryHours + extraHours }
 
     fun observeTodayLoads(): Flow<TodayLoads?> {
         val date = today()

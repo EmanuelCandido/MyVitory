@@ -34,6 +34,15 @@ em cada exercício colando o link. A **busca** de vídeos precisa de uma chave d
 A cota gratuita é de 10.000 unidades por dia e cada busca custa 100 (cerca de 100 buscas por dia).
 O app guarda cada busca por 7 dias e só busca de novo quando você pede.
 
+## Evolução
+
+- **Progressão de carga:** se você fez todas as séries com a mesma carga e bateu as repetições, o próximo treino
+  já vem um degrau acima (+2,5 kg; +2 kg em halteres) e o card avisa.
+- **Sua evolução:** na tela de cada exercício, gráfico da maior carga por treino e a lista das últimas sessões.
+- **Dias indisponíveis:** em Semana, toque num dia e escolha "Não vou poder treinar neste dia". O recálculo deixa
+  esse dia de fora e, se havia treino nele, propõe onde encaixar.
+- **Nível iniciante:** em Ajustes, soma 24 h de descanso a cada músculo.
+
 ## Notificações
 
 Tudo opcional e gerado no próprio celular (WorkManager), ligado em **Hoje › Ajustes**: lembrete do treino do dia

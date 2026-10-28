@@ -3,6 +3,7 @@ package com.myvitory.app.data
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.myvitory.app.data.db.MyVitoryDatabase
+import com.myvitory.app.domain.DayState
 import com.myvitory.app.domain.Muscle
 import com.myvitory.app.domain.SessionStatus
 import java.time.LocalDate
@@ -89,6 +90,39 @@ class CoachRepositoryTest {
         coach.apply(data, data.result.best.copy(assignment = data.result.best.assignment.filterKeys { it != restDay }))
         training.ensureWeek(monday)
         assertNull(week().first { it.date == restDay }.session)
+    }
+
+    @Test
+    fun `dia indisponível fica fora do recálculo`() = runBlocking {
+        val sunday = monday.plusDays(6)
+        training.setUnavailable(sunday, true)
+        val data = coach.buildReplan()!!
+        assertTrue(data.input.slots.none { it.date == sunday })
+        assertTrue(data.result.best.assignment.keys.none { it == sunday })
+        assertEquals(DayState.UNAVAILABLE, week()[6].state)
+    }
+
+    @Test
+    fun `indisponível num dia de treino manda o treino para o recálculo`() = runBlocking {
+        val friday = today.plusDays(1)
+        val undo = training.setUnavailable(friday, true)
+        assertEquals(SessionStatus.MISSED, week()[4].session?.status)
+        assertEquals(2, coach.observePendingMissed().first().size)
+        val data = coach.buildReplan()!!
+        assertTrue(data.input.slots.none { it.date == friday })
+
+        training.undoAvailability(undo)
+        assertEquals(SessionStatus.PLANNED, week()[4].session?.status)
+        assertEquals(DayState.PLANNED, week()[4].state)
+    }
+
+    @Test
+    fun `nível iniciante soma 24 h nas janelas`() = runBlocking {
+        val beginner = CoachRepository(db, today = { today }, clock = { nowMillis }, zone = ZoneOffset.UTC, extraRecoveryHours = { 24 })
+        val data = beginner.buildReplan()!!
+        assertEquals(96, data.input.recoveryHours(Muscle.QUADS))
+        val back = beginner.recoveryNow(beginner.observeRecoveryEvents().first(), extraHours = 24).first { it.muscle == Muscle.BACK }
+        assertEquals(39, back.percent) // 38 de 96 h
     }
 
     @Test

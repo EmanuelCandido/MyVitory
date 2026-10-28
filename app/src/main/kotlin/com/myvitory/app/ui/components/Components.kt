@@ -149,6 +149,9 @@ fun StatusMark(state: DayState, modifier: Modifier = Modifier, size: Dp = 20.dp)
         DayState.MOVED -> Box(modifier.size(size).border(2.dp, Palette.Orange, CircleShape), Alignment.Center) {
             AppIcon(R.drawable.ic_arrow_right, null, tint = Palette.Orange, size = size * 0.55f)
         }
+        DayState.UNAVAILABLE -> Box(modifier.size(size).border(2.dp, Palette.Neutral, CircleShape), Alignment.Center) {
+            Box(Modifier.width(size * 0.5f).height(2.dp).background(Palette.TextMuted, CircleShape))
+        }
         DayState.MISSED, DayState.UNMARKED -> Box(modifier.size(size).border(2.dp, Palette.Orange, CircleShape), Alignment.Center) {
             AppIcon(R.drawable.ic_close, null, tint = Palette.Orange, size = size * 0.5f)
         }
