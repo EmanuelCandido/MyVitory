@@ -88,9 +88,14 @@ interface TemplateDao {
 
     @Query("SELECT DISTINCT exerciseId FROM template_items")
     fun observeExerciseIdsInPlans(): Flow<List<String>>
+
+    @Query("SELECT templateId, exerciseId FROM template_items")
+    fun observeTemplateExercises(): Flow<List<TemplateExercise>>
 }
 
 data class TemplateCount(val templateId: Long, val count: Int)
+
+data class TemplateExercise(val templateId: Long, val exerciseId: String)
 
 data class ExerciseHistoryPoint(val date: LocalDate, val topKg: Double, val volumeKg: Double, val reps: String)
 

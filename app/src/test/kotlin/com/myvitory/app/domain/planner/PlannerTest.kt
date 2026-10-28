@@ -96,6 +96,31 @@ class PlannerTest {
     }
 
     @Test
+    fun `sem fim de semana livre, funde Pernas com Posterior em vez de perder um treino`() {
+        val noWeekend = input.copy(
+            pending = listOf(missedLegs.copy(exerciseCount = 5), thursday.copy(exerciseCount = 5), friday.copy(exerciseCount = 5)),
+            slots = listOf(Slot(thu, false), Slot(fri, false)),
+        )
+        val best = Planner.replan(noWeekend).best
+        assertTrue(best.dropped.isEmpty())
+        val merged = best.assignment.values.single { it.mergedWith != null }
+        assertEquals("Pernas + Posterior + Glúteos", merged.name)
+        assertEquals(10, merged.exerciseCount)
+        assertEquals(best.dateOf(missedLegs), best.dateOf(friday))
+
+        val explanation = Planner.explain(noWeekend, best)
+        assertTrue(explanation.changes.any { it.after?.mergedWith != null })
+    }
+
+    @Test
+    fun `não funde treinos sem músculo principal em comum nem treinos longos demais`() {
+        val chest = Workout(9, 9, "Peito", chestTri, wed, missed = true, exerciseCount = 5)
+        assertTrue(Planner.mergeVariants(listOf(chest, thursday.copy(exerciseCount = 5), friday.copy(exerciseCount = 5))).isEmpty())
+        val longLegs = missedLegs.copy(exerciseCount = 7)
+        assertTrue(Planner.mergeVariants(listOf(longLegs, friday.copy(exerciseCount = 5))).isEmpty())
+    }
+
+    @Test
     fun `sequência longa custa`() {
         val days = setOf(mon, tue, wed, thu, fri)
         assertEquals(5, Planner.longestStreak(days))

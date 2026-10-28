@@ -27,8 +27,8 @@ android {
         minSdk = 26
         targetSdk = 36
         // Cada envio à Play Store precisa de um versionCode maior que o anterior.
-        versionCode = 5
-        versionName = "0.5.0"
+        versionCode = 6
+        versionName = "0.6.0"
         buildConfigField("String", "YOUTUBE_API_KEY", "\"$youtubeApiKey\"")
     }
 
@@ -99,6 +99,7 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.process)
+    implementation(libs.androidx.glance.appwidget)
 
     implementation(libs.youtube.player)
     implementation(libs.coil.compose)

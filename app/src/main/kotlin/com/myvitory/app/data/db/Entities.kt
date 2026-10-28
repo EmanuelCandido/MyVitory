@@ -68,6 +68,8 @@ data class SessionEntity(
     val movedTo: LocalDate? = null,
     /** O usuário já decidiu o que fazer com este treino perdido (aplicou ou pulou o recálculo). */
     @ColumnInfo(defaultValue = "0") val resolved: Boolean = false,
+    /** Treino fundido a este pelo recálculo: os dois no mesmo dia, com uma série a menos por exercício. */
+    val mergedTemplateId: Long? = null,
 )
 
 @Entity(

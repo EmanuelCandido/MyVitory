@@ -55,9 +55,12 @@ class TodayViewModel(private val repo: TrainingRepository, coach: CoachRepositor
     private val week = repo.observeWeek(weekStart)
 
     private val preview = week
-        .map { days -> days.firstOrNull { it.date == today }?.session?.templateId }
+        .map { days -> days.firstOrNull { it.date == today }?.session?.let { it.templateId to it.mergedTemplateId } }
         .distinctUntilChanged()
-        .flatMapLatest { id -> if (id == null) flowOf(emptyList()) else repo.observeTemplateItems(id) }
+        .flatMapLatest { ids ->
+            val templateId = ids?.first
+            if (templateId == null) flowOf(emptyList()) else repo.observeSessionItems(templateId, ids.second)
+        }
 
     val state: StateFlow<TodayUiState> = combine(week, preview, coach.observePendingMissed()) { days, items, pending ->
         TodayUiState(

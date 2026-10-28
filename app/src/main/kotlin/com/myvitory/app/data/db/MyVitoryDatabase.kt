@@ -20,7 +20,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PinnedVideoEntity::class,
         UnavailableDayEntity::class,
     ],
-    version = 4,
+    version = 5,
 )
 @TypeConverters(Converters::class)
 abstract class MyVitoryDatabase : RoomDatabase() {
@@ -64,9 +64,16 @@ abstract class MyVitoryDatabase : RoomDatabase() {
             }
         }
 
+        /** Fase 6: treino fundido pelo recálculo. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE sessions ADD COLUMN mergedTemplateId INTEGER")
+            }
+        }
+
         fun create(context: Context): MyVitoryDatabase =
             Room.databaseBuilder(context, MyVitoryDatabase::class.java, "myvitory.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
     }
 }

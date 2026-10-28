@@ -258,7 +258,12 @@ private fun TodayCard(
                 SectionLabel("Treino de hoje")
             }
             Text(session.name, style = MaterialTheme.typography.displaySmall)
-            Text("${day.exerciseCount} exercícios", style = MaterialTheme.typography.bodyMedium, color = Palette.TextMuted)
+            Text(
+                if (session.mergedTemplateId != null) "${day.exerciseCount} exercícios · dois treinos em um, uma série a menos em cada"
+                else "${day.exerciseCount} exercícios",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Palette.TextMuted,
+            )
         }
         if (state.preview.isNotEmpty()) {
             Column {
