@@ -6,12 +6,22 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val localProps = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 // Chave da YouTube Data API: em local.properties (fora do git) ou na variável YOUTUBE_API_KEY.
 // Sem chave o app funciona; só a busca de vídeos fica desligada.
-val youtubeApiKey: String = Properties().run {
-    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
-    getProperty("youtube.apiKey") ?: System.getenv("YOUTUBE_API_KEY") ?: ""
-}
+val youtubeApiKey: String = localProps.getProperty("youtube.apiKey") ?: System.getenv("YOUTUBE_API_KEY") ?: ""
+
+// Painel do treinador (Firebase): também em local.properties, sem o google-services.json. Sem eles o app
+// funciona igual e a opção "Painel do treinador" não aparece. Passo a passo em docs/painel-web.md.
+fun firebaseProp(key: String): String = localProps.getProperty("firebase.$key") ?: ""
+
+// Onde o app procura versão nova (publicada por web/scripts/publicar-app.mjs no Hosting do painel).
+val updateUrl: String = localProps.getProperty("update.url")
+    ?: firebaseProp("projectId").takeIf { it.isNotBlank() }?.let { "https://$it.web.app/app/version.json" }
+    ?: ""
 
 // Chave de upload da Play Store: keystore.properties na raiz (fora do git). Sem ele, o release sai sem assinatura.
 val keystoreProps = Properties().apply {
@@ -27,9 +37,13 @@ android {
         minSdk = 26
         targetSdk = 36
         // Cada envio à Play Store precisa de um versionCode maior que o anterior.
-        versionCode = 6
-        versionName = "0.6.0"
+        versionCode = 11
+        versionName = "0.11.0"
         buildConfigField("String", "YOUTUBE_API_KEY", "\"$youtubeApiKey\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"${firebaseProp("apiKey")}\"")
+        buildConfigField("String", "FIREBASE_APP_ID", "\"${firebaseProp("appId")}\"")
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${firebaseProp("projectId")}\"")
+        buildConfigField("String", "UPDATE_URL", "\"$updateUrl\"")
     }
 
     signingConfigs {
@@ -44,11 +58,18 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Emulador do Firebase (ex.: 10.0.2.2 no emulador do Android, ou o IP do PC na rede). Só no debug.
+            buildConfigField("String", "FIREBASE_EMULATOR_HOST", "\"${firebaseProp("emulatorHost")}\"")
+        }
         release {
+            buildConfigField("String", "FIREBASE_EMULATOR_HOST", "\"\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfigs.findByName("upload")?.let { signingConfig = it }
+            // Sem a chave de upload, assina com a de debug: dá para instalar o release (rápido) direto no celular.
+            // Para a Play Store, o keystore.properties é obrigatório.
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("debug")
         }
     }
 
@@ -100,10 +121,18 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.glance.appwidget)
+    // Instala os perfis de compilação (do Compose e do app) mesmo fora da Play Store: abre e rola mais liso.
+    implementation(libs.androidx.profileinstaller)
 
     implementation(libs.youtube.player)
     implementation(libs.coil.compose)
     implementation(libs.coil.network)
+    implementation(libs.coil.gif)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

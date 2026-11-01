@@ -14,7 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -93,7 +93,7 @@ private fun Stat(label: String, value: String, detail: String) {
 
 @Composable
 private fun LineChart(points: List<ExerciseHistoryPoint>) {
-    var selected by remember(points) { mutableStateOf(points.lastIndex) }
+    var selected by remember(points) { mutableIntStateOf(points.lastIndex) }
     val measurer = rememberTextMeasurer()
     val axisStyle = TextStyle(fontFamily = Barlow, fontSize = 11.sp, color = Palette.TextFaint)
     val labelStyle = TextStyle(fontFamily = Barlow, fontSize = 12.sp, color = Palette.Text)

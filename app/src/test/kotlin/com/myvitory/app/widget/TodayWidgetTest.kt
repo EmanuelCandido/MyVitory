@@ -2,6 +2,7 @@ package com.myvitory.app.widget
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.myvitory.app.data.CoachRepository
 import com.myvitory.app.data.TrainingRepository
 import com.myvitory.app.data.db.MyVitoryDatabase
 import com.myvitory.app.domain.SessionStatus
@@ -26,7 +27,7 @@ class TodayWidgetTest {
     fun setUp() = runBlocking {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), MyVitoryDatabase::class.java).build()
         training = TrainingRepository(db, today = { today })
-        training.seedIfEmpty()
+        TrainingRepository(db, today = { monday }).seedIfEmpty()
     }
 
     @After
@@ -62,5 +63,18 @@ class TodayWidgetTest {
         val blocked = WidgetContentLoader.load(training)
         assertEquals(WidgetAction.REPLAN, blocked.action)
         assertTrue(blocked.subtitle.startsWith("Não vai dar hoje"))
+    }
+
+    @Test
+    fun `depois do recálculo o widget diz para onde o treino foi e não oferece reorganizar`() = runBlocking {
+        training.ensureWeek(monday)
+        training.setUnavailable(today, true)
+        val coach = CoachRepository(db, today = { today })
+        val data = coach.buildReplan()!!
+        coach.apply(data, data.result.best)
+
+        val after = WidgetContentLoader.load(training)
+        assertEquals(WidgetAction.OPEN, after.action)
+        assertTrue(after.subtitle, after.subtitle.startsWith("Foi para "))
     }
 }

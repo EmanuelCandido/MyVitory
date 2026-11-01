@@ -59,11 +59,13 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.myvitory.app.R
+import com.myvitory.app.data.ExerciseMedia
 import com.myvitory.app.data.db.CachedVideoEntity
 import com.myvitory.app.data.video.VideoError
 import com.myvitory.app.domain.VideoLinks
 import com.myvitory.app.ui.appViewModel
 import com.myvitory.app.ui.components.AppIcon
+import com.myvitory.app.ui.components.ExerciseThumb
 import com.myvitory.app.ui.components.SectionLabel
 import com.myvitory.app.ui.theme.Palette
 import com.myvitory.app.ui.video.YouTubePlayerBox
@@ -73,6 +75,7 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenExercise: (String) -> Uni
     val vm = appViewModel { LibraryViewModel(it.training, it.videos) }
     val state by vm.state.collectAsStateWithLifecycle()
     var playing by remember { mutableStateOf<CachedVideoEntity?>(null) }
+    var creating by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().padding(contentPadding)) {
         Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -118,6 +121,17 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenExercise: (String) -> Uni
 
         if (state.tab == 0) {
             LazyColumn(contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp)) {
+                item(key = "new") {
+                    TextButton(onClick = { creating = true }, modifier = Modifier.heightIn(min = 52.dp)) {
+                        AppIcon(R.drawable.ic_plus, null, tint = Palette.Lime, size = 18.dp)
+                        Text(
+                            if (state.query.isBlank()) "  Novo exercício" else "  Criar “${state.query.trim()}”",
+                            color = Palette.Lime,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    HorizontalDivider(color = Palette.Surface)
+                }
                 items(state.exercises, key = { it.exercise.id }) { item ->
                     Row(
                         Modifier
@@ -127,9 +141,7 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenExercise: (String) -> Uni
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Box(Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(Palette.Surface), Alignment.Center) {
-                            AppIcon(R.drawable.ic_play, null, tint = Palette.TextMuted, size = 18.dp)
-                        }
+                        ExerciseThumb(item.exercise.id, 48.dp)
                         Column(Modifier.weight(1f)) {
                             Text(item.exercise.name, style = MaterialTheme.typography.titleMedium)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -139,6 +151,7 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenExercise: (String) -> Uni
                                     color = Palette.TextMuted,
                                 )
                                 if (item.inPlan) Text("NO SEU PLANO", style = MaterialTheme.typography.labelSmall, color = Palette.Lime)
+                                if (item.exercise.custom) Text("SEU", style = MaterialTheme.typography.labelSmall, color = Palette.Orange)
                             }
                         }
                         AppIcon(R.drawable.ic_chevron_right, null, tint = Palette.Neutral, size = 18.dp)
@@ -149,6 +162,18 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenExercise: (String) -> Uni
         } else {
             VideoResults(state, onSearch = vm::searchVideos, onPlay = { playing = it })
         }
+    }
+
+    if (creating) {
+        ExerciseEditorDialog(
+            initial = null,
+            initialName = state.query.trim(),
+            onDismiss = { creating = false },
+            onSave = { draft ->
+                creating = false
+                vm.createExercise(draft) { onOpenExercise(it) }
+            },
+        )
     }
 
     playing?.let { video ->

@@ -10,17 +10,23 @@ import com.myvitory.app.data.db.SetLogEntity
 import com.myvitory.app.data.db.TemplateEntity
 import com.myvitory.app.data.db.TemplateItemEntity
 import com.myvitory.app.data.db.TemplateItemRow
+import com.myvitory.app.data.db.TombstoneEntity
 import com.myvitory.app.data.db.UnavailableDayEntity
+import com.myvitory.app.data.db.newRemoteId
 import com.myvitory.app.domain.DayState
 import com.myvitory.app.domain.DoneSet
 import com.myvitory.app.domain.LoadSuggestion
+import com.myvitory.app.domain.Muscle
 import com.myvitory.app.domain.Progression
 import com.myvitory.app.domain.SessionStatus
 import com.myvitory.app.domain.WeekLogic
 import java.time.DayOfWeek
 import java.time.LocalDate
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -32,6 +38,8 @@ data class DayView(
     val state: DayState,
     /** A pessoa avisou que não pode treinar neste dia. */
     val unavailable: Boolean = false,
+    /** Mudado só para esta semana (inclusive um descanso). */
+    val special: Boolean = false,
 )
 
 data class WorkoutExercise(
@@ -43,6 +51,8 @@ data class WorkoutExercise(
     val lastTime: String?,
     /** Carga subiu porque todas as repetições foram batidas na última vez. */
     val suggestion: LoadSuggestion? = null,
+    /** Observação do treino para este exercício ("descer em 3 s"). Vazia quando não há. */
+    val note: String = "",
 )
 
 data class WorkoutView(val session: SessionEntity, val exercises: List<WorkoutExercise>) {
@@ -65,15 +75,25 @@ class TrainingRepository(
     private val sessions = db.sessions()
     private val setLogs = db.setLogs()
     private val availability = db.availability()
+    private val sync = db.sync()
 
     private val seedLock = Mutex()
 
     fun today(): LocalDate = today.invoke()
 
+    fun observeToday(): Flow<LocalDate> = observeDate(today)
+
+    /** O app e a tela Hoje pedem a semente na abertura; basta uma vez por processo. */
+    @Volatile private var seeded = false
+
     suspend fun seedIfEmpty() = seedLock.withLock {
+        if (seeded) return@withLock
         // Exercícios novos do catálogo chegam também a quem já usa o app (IGNORE não mexe nos existentes).
         exercises.insertAll(SeedData.exercises)
-        if (templates.codes().isNotEmpty()) return@withLock
+        if (templates.codes().isNotEmpty()) {
+            seeded = true
+            return@withLock
+        }
         db.withTransaction {
             val planDays = DayOfWeek.entries.associateWith<DayOfWeek, Long?> { null }.toMutableMap()
             SeedData.templates.forEach { t ->
@@ -89,7 +109,15 @@ class TrainingRepository(
                 planDays[t.day] = id
             }
             plan.upsert(planDays.map { (day, id) -> PlanDayEntity(day.value, id) })
+            // Primeira abertura: os dias que já passaram nesta semana viram descanso, não falta.
+            val date = today()
+            sessions.insertAll(
+                WeekLogic.daysOf(WeekLogic.weekStartOf(date)).filter { it.isBefore(date) }
+                    .map { SessionEntity(date = it, templateId = null, name = CoachRepository.REST_NAME, status = SessionStatus.REST) }
+            )
         }
+        // Só depois de gravar: se algo falhar, a próxima abertura tenta de novo.
+        seeded = true
     }
 
     /** Cria as sessões planejadas da semana que ainda não existem. */
@@ -128,6 +156,7 @@ class TrainingRepository(
                         ).size,
                     state = WeekLogic.dayState(date, today(), session?.status, moved = session?.movedTo != null, unavailable = date in blockedDates),
                     unavailable = date in blockedDates,
+                    special = byDate[date]?.special == true,
                 )
             }
         }
@@ -136,13 +165,39 @@ class TrainingRepository(
 
     fun observeExercises(): Flow<List<ExerciseEntity>> = exercises.observeAll()
 
+    // ---- Exercícios do usuário ----
+
+    /** Cria um exercício próprio e devolve o id. */
+    suspend fun createExercise(name: String, equipment: String, primary: List<Muscle>, secondary: List<Muscle>): String {
+        // Id aleatório: o painel do treinador também cria exercícios, e os dois lados não podem gerar o mesmo.
+        val id = "custom_${newRemoteId().take(16)}"
+        exercises.insert(ExerciseEntity(id, name.trim(), equipment, primary, secondary - primary.toSet(), custom = true, updatedAt = clock()))
+        return id
+    }
+
+    suspend fun updateExercise(id: String, name: String, equipment: String, primary: List<Muscle>, secondary: List<Muscle>) {
+        val current = exercises.get(id)?.takeIf { it.custom } ?: return
+        exercises.update(
+            current.copy(name = name.trim(), equipment = equipment, primary = primary, secondary = secondary - primary.toSet(), updatedAt = clock())
+        )
+    }
+
+    /** Apaga só exercício próprio que não está em nenhum treino nem no histórico. Devolve false quando não apagou. */
+    suspend fun deleteExercise(id: String): Boolean = db.withTransaction {
+        if (exercises.get(id)?.custom != true || exercises.usageCount(id) > 0) return@withTransaction false
+        exercises.deleteCustom(id)
+        db.videos().unpin(id)
+        sync.addTombstones(listOf(TombstoneEntity(exerciseKey(id), clock())))
+        true
+    }
+
     // ---- Treino em andamento ----
 
     /**
      * Exercícios de uma sessão. Num treino fundido entram os dois treinos, sem repetir exercício,
      * com uma série a menos em cada um (mínimo de 2): o volume total cabe num dia.
      */
-    private suspend fun itemsFor(session: SessionEntity): List<TemplateItemEntity> {
+    internal suspend fun itemsFor(session: SessionEntity): List<TemplateItemEntity> {
         val main = session.templateId?.let { templates.getItems(it) }.orEmpty()
         val mergedId = session.mergedTemplateId ?: return main
         val offset = (main.maxOfOrNull { it.position } ?: -1) + 1
@@ -162,8 +217,9 @@ class TrainingRepository(
      * Na primeira vez cria as séries a partir do treino, com a carga da última vez,
      * ou um degrau acima quando todas as repetições foram batidas (progressão automática).
      */
-    suspend fun startWorkout(sessionId: Long) {
-        val session = sessions.get(sessionId) ?: return
+    suspend fun startWorkout(sessionId: Long) = db.withTransaction {
+        val session = sessions.get(sessionId) ?: return@withTransaction
+        // Na transação: abrir o treino duas vezes seguidas não cria as séries em dobro.
         if (setLogs.countForSession(sessionId) == 0) {
             val items = itemsFor(session)
             val equipment = exercises.getAll().associate { it.id to it.equipment }
@@ -186,7 +242,8 @@ class TrainingRepository(
             setLogs.insertAll(logs)
         }
         // Abrir um treino já fechado (para ver ou corrigir) não reinicia o cronômetro.
-        if (session.startedAt == null && session.status == SessionStatus.PLANNED) {
+        // Registrar depois um dia que passou não carimba "agora": a recuperação usaria o horário errado.
+        if (session.startedAt == null && session.status == SessionStatus.PLANNED && session.date == today()) {
             sessions.update(session.copy(startedAt = clock()))
         }
     }
@@ -194,9 +251,9 @@ class TrainingRepository(
     fun observeWorkout(sessionId: Long): Flow<WorkoutView?> {
         // Histórico não muda durante o treino: calcula uma vez por exercício.
         val historyCache = mutableMapOf<String, Pair<String?, LoadSuggestion?>>()
-        var targetCache: Map<String, Pair<Int, Int>>? = null
-        suspend fun targets(session: SessionEntity): Map<String, Pair<Int, Int>> =
-            targetCache ?: itemsFor(session).associate { it.exerciseId to (it.reps to it.sets) }.also { targetCache = it }
+        var targetCache: Map<String, TemplateItemEntity>? = null
+        suspend fun targets(session: SessionEntity): Map<String, TemplateItemEntity> =
+            targetCache ?: itemsFor(session).associateBy { it.exerciseId }.also { targetCache = it }
         return combine(
             sessions.observe(sessionId),
             setLogs.observeForSession(sessionId),
@@ -214,11 +271,14 @@ class TrainingRepository(
                         val exerciseId = key.second
                         val (lastTime, suggestion) = historyCache.getOrPut(exerciseId) {
                             val last = setLogs.lastDone(exerciseId, session.date)
-                            val (reps, setCount) = targets(session)[exerciseId] ?: (sets.first().reps to sets.size)
+                            val target = targets(session)[exerciseId]
+                            val reps = target?.reps ?: sets.first().reps
+                            val setCount = target?.sets ?: sets.size
                             val equipment = catalog.firstOrNull { it.id == exerciseId }?.equipment.orEmpty()
                             formatLastTime(last) to suggestionFor(last, reps, setCount, equipment)
                         }
-                        WorkoutExercise(exerciseId, names[exerciseId] ?: exerciseId, key.first, sets, lastTime, suggestion)
+                        val note = targets(session)[exerciseId]?.note.orEmpty()
+                        WorkoutExercise(exerciseId, names[exerciseId] ?: exerciseId, key.first, sets, lastTime, suggestion, note)
                     },
                 )
             }
@@ -238,7 +298,10 @@ class TrainingRepository(
     data class SwapUndo(
         val removed: List<SetLogEntity>,
         val insertedIds: List<Long>,
-        val templateId: Long?,
+        /** Itens de treino que passaram a usar [to] ("No plano todo"). */
+        val planItemIds: List<Long>,
+        /** O plano base mudou (e não só a cópia "só nesta semana" deste dia). */
+        val changedBasePlan: Boolean,
         val from: String,
         val to: String,
     )
@@ -246,7 +309,7 @@ class TrainingRepository(
     /**
      * Troca o exercício no treino em andamento: as séries ainda não feitas passam para [to],
      * na mesma posição; as já feitas ficam registradas com o exercício original.
-     * [alsoInPlan] troca também no treino do plano, valendo para as próximas semanas.
+     * [alsoInPlan] troca também nos treinos do plano por trás deste dia, valendo para as próximas semanas.
      */
     suspend fun swapExercise(sessionId: Long, from: String, to: String, alsoInPlan: Boolean): SwapUndo? {
         if (from == to) return null
@@ -260,16 +323,35 @@ class TrainingRepository(
             }
             setLogs.deleteAll(open.map { it.id })
             val inserted = setLogs.insertAll(replacements)
-            val templateId = session.templateId.takeIf { alsoInPlan }
-            templateId?.let { templates.replaceExercise(it, from, to) }
-            SwapUndo(open, inserted, templateId, from, to)
+            val changed = if (!alsoInPlan) emptyList() else planTemplatesOf(session).flatMap { template ->
+                templates.getItems(template.id).filter { it.exerciseId == from }.map { template to it.id }
+            }
+            val itemIds = changed.map { it.second }
+            if (itemIds.isNotEmpty()) {
+                templates.setExercise(itemIds, to)
+                templates.touch(changed.map { it.first.id }.distinct(), clock())
+            }
+            SwapUndo(open, inserted, itemIds, changedBasePlan = changed.any { !it.first.weekOnly }, from, to)
         }
     }
+
+    /**
+     * Treinos que "No plano todo" muda: os do dia (o principal e o fundido) e, quando um deles é cópia
+     * "só nesta semana", também o treino do plano base de onde a cópia saiu.
+     */
+    private suspend fun planTemplatesOf(session: SessionEntity): List<TemplateEntity> =
+        listOfNotNull(session.templateId, session.mergedTemplateId).flatMap { id ->
+            val template = templates.getTemplate(id) ?: return@flatMap emptyList()
+            if (template.weekOnly) listOfNotNull(template, templates.getBaseByCode(template.code)) else listOf(template)
+        }.distinctBy { it.id }
 
     suspend fun undoSwap(undo: SwapUndo) = db.withTransaction {
         setLogs.deleteAll(undo.insertedIds)
         setLogs.insertAll(undo.removed)
-        undo.templateId?.let { templates.replaceExercise(it, undo.to, undo.from) }
+        if (undo.planItemIds.isNotEmpty()) {
+            templates.setExercise(undo.planItemIds, undo.from)
+            undo.planItemIds.forEach { touchItem(it) }
+        }
     }
 
     fun observeExerciseIdsInPlans(): Flow<List<String>> = templates.observeExerciseIdsInPlans()
@@ -311,7 +393,8 @@ class TrainingRepository(
         val session = sessions.get(sessionId) ?: return null
         val logs = setLogs.getForSession(sessionId)
         val status = WeekLogic.statusOnFinish(logs.size, logs.count { it.done }) ?: return null
-        sessions.update(session.copy(status = status, finishedAt = clock()))
+        // Mesma regra do markSession: dia que passou fica sem horário (a recuperação usa o fim da tarde daquele dia).
+        sessions.update(session.copy(status = status, finishedAt = if (session.date == today()) clock() else session.finishedAt))
         return status
     }
 
@@ -351,6 +434,10 @@ class TrainingRepository(
         sessions.update(undo.previous)
     }
 
+    /** Comentário da pessoa sobre o treino. Vazio apaga. */
+    suspend fun setSessionComment(sessionId: Long, comment: String) =
+        sessions.setComment(sessionId, comment.trim().take(MAX_TEXT).ifEmpty { null })
+
     // ---- Plano base e treinos ----
 
     fun observePlanBase(): Flow<List<PlanRow>> =
@@ -372,25 +459,127 @@ class TrainingRepository(
     fun observeTemplate(templateId: Long): Flow<TemplateEntity?> = templates.observeTemplate(templateId)
 
     suspend fun setPlanDay(day: DayOfWeek, templateId: Long?) {
-        plan.upsert(listOf(PlanDayEntity(day.value, templateId)))
+        plan.upsert(listOf(PlanDayEntity(day.value, templateId, updatedAt = clock())))
         refreshUpcomingSessions()
     }
+
+    // ---- Só nesta semana ----
+
+    /** Troca o treino (ou põe descanso, com null) de um dia só nesta semana. Devolve false se o dia já começou. */
+    suspend fun setDayThisWeek(date: LocalDate, templateId: Long?): Boolean = db.withTransaction {
+        if (date.isBefore(today())) return@withTransaction false
+        val current = sessions.getByDate(date)
+        if (current != null && isTouched(current)) return@withTransaction false
+        val template = templateId?.let { templates.getTemplate(it) ?: return@withTransaction false }
+        current?.let { sessions.delete(it.id) }
+        sessions.insert(
+            SessionEntity(
+                date = date,
+                templateId = template?.id,
+                name = template?.name ?: CoachRepository.REST_NAME,
+                status = if (template == null) SessionStatus.REST else SessionStatus.PLANNED,
+                special = true,
+            )
+        )
+        current?.templateId?.let { templates.deleteUnusedWeekOnly(it) }
+        sessions.reopenMovedTo(date, keepTemplateId = template?.id)
+        true
+    }
+
+    /**
+     * Prepara os exercícios de um dia para editar só nesta semana: copia o treino (já com a fusão, se houver)
+     * e liga o dia à cópia. Devolve o id da cópia para abrir no editor, ou null se o dia já começou.
+     */
+    suspend fun customizeDayThisWeek(sessionId: Long): Long? = db.withTransaction {
+        val session = sessions.get(sessionId) ?: return@withTransaction null
+        if (session.date.isBefore(today()) || isTouched(session)) return@withTransaction null
+        val templateId = session.templateId ?: return@withTransaction null
+        val template = templates.getTemplate(templateId) ?: return@withTransaction null
+        if (template.weekOnly && session.mergedTemplateId == null) return@withTransaction templateId
+        val items = itemsFor(session)
+        val copyId = templates.insertTemplate(TemplateEntity(code = template.code, name = session.name, weekOnly = true))
+        items.forEachIndexed { index, item -> templates.insertItem(item.copy(id = 0, templateId = copyId, position = index)) }
+        sessions.update(session.copy(templateId = copyId, mergedTemplateId = null, special = true))
+        if (template.weekOnly) templates.deleteUnusedWeekOnly(templateId)
+        copyId
+    }
+
+    /** Desfaz a mudança deste dia: volta o que o plano base manda. */
+    suspend fun resetDayToPlan(date: LocalDate): Boolean {
+        val reset = db.withTransaction {
+            val current = sessions.getByDate(date) ?: return@withTransaction false
+            if (date.isBefore(today()) || isTouched(current)) return@withTransaction false
+            sessions.delete(current.id)
+            current.templateId?.let { templates.deleteUnusedWeekOnly(it) }
+            true
+        }
+        if (reset) {
+            ensureWeek(WeekLogic.weekStartOf(date))
+            sessions.reopenMovedTo(date, keepTemplateId = sessions.getByDate(date)?.templateId)
+        }
+        return reset
+    }
+
+    private suspend fun isTouched(session: SessionEntity) =
+        session.startedAt != null || setLogs.countForSession(session.id) > 0 ||
+            (session.status != SessionStatus.PLANNED && session.status != SessionStatus.REST)
+
+    /** Dia que usa esta cópia "só nesta semana", para o editor dizer qual é. */
+    fun observeWeekOnlyDay(templateId: Long): Flow<LocalDate?> = sessions.observeByTemplate(templateId).map { it?.date }
 
     suspend fun createTemplate(): Long {
         val used = templates.codes().toSet()
         val code = ('A'..'Z').map { it.toString() }.firstOrNull { it !in used } ?: "${used.size + 1}"
-        return templates.insertTemplate(TemplateEntity(code = code, name = "Treino $code"))
+        return templates.insertTemplate(TemplateEntity(code = code, name = "Treino $code", updatedAt = clock()))
+    }
+
+    /**
+     * Apaga um treino do plano base. Os dias do plano com ele viram descanso, os dias que vêm por aí sem começar
+     * saem da semana e o histórico (treinos feitos) continua. Cópias "só nesta semana" não passam por aqui.
+     * [tombstone] avisa o painel do treinador; o sync passa false quando a ordem de apagar veio de lá.
+     */
+    suspend fun deleteTemplate(templateId: Long, tombstone: Boolean = true): Boolean {
+        val deleted = db.withTransaction {
+            val template = templates.getTemplate(templateId)?.takeIf { !it.weekOnly } ?: return@withTransaction false
+            val date = today()
+            sessions.deleteUntouchedWithTemplate(date, templateId)
+            // Dia fundido com o treino apagado fica só com o outro.
+            sessions.getUpcomingWithTemplate(date, templateId).filter { it.mergedTemplateId == templateId }.forEach { s ->
+                val main = s.templateId?.let { templates.getTemplate(it)?.name } ?: s.name
+                sessions.update(s.copy(mergedTemplateId = null, name = main))
+            }
+            sessions.resolveMissedWithTemplate(templateId)
+            plan.clearTemplate(templateId, clock())
+            templates.deleteTemplate(templateId)
+            if (tombstone) sync.addTombstones(listOf(TombstoneEntity(templateKey(template.remoteId), clock())))
+            true
+        }
+        if (deleted) ensureWeek(WeekLogic.weekStartOf(today()))
+        return deleted
     }
 
     suspend fun renameTemplate(templateId: Long, name: String) {
         val template = templates.getTemplate(templateId) ?: return
         val clean = name.trim()
         if (clean.isEmpty() || clean == template.name) return
-        templates.updateTemplate(template.copy(name = clean))
-        refreshUpcomingSessions()
+        templates.updateTemplate(template.copy(name = clean, updatedAt = clock()))
+        // Cópia de um dia só: o nome vale direto para aquele dia.
+        if (template.weekOnly) sessions.renameForTemplate(templateId, clean) else renameUpcoming(templateId)
     }
 
-    suspend fun addExerciseToTemplate(templateId: Long, exerciseId: String) {
+    /**
+     * Só o nome muda: os dias que vêm por aí ganham o nome novo sem refazer a semana (refazer apagaria
+     * o que o recálculo decidiu). Num dia fundido, o nome junta os dois treinos de novo.
+     */
+    internal suspend fun renameUpcoming(templateId: Long) {
+        sessions.getUpcomingWithTemplate(today(), templateId).forEach { session ->
+            val main = session.templateId?.let { templates.getTemplate(it)?.name } ?: return@forEach
+            val merged = session.mergedTemplateId?.let { templates.getTemplate(it)?.name }
+            sessions.update(session.copy(name = if (merged == null) main else "$merged + $main"))
+        }
+    }
+
+    suspend fun addExerciseToTemplate(templateId: Long, exerciseId: String) = db.withTransaction {
         val position = templates.maxPosition(templateId) + 1
         templates.insertItem(
             TemplateItemEntity(
@@ -398,15 +587,51 @@ class TrainingRepository(
                 sets = 3, reps = 10, restSec = 90,
             )
         )
+        templates.touch(listOf(templateId), clock())
     }
 
-    suspend fun updateTemplateItem(itemId: Long, sets: Int, reps: Int) =
+    suspend fun updateTemplateItem(itemId: Long, sets: Int, reps: Int) = db.withTransaction {
         templates.updateItemVolume(itemId, sets.coerceIn(1, 10), reps.coerceIn(1, 50))
+        touchItem(itemId)
+    }
 
-    suspend fun removeTemplateItem(itemId: Long) = templates.deleteItem(itemId)
+    /** Descanso entre séries, de 0 a 10 min. */
+    suspend fun setItemRest(itemId: Long, restSec: Int) = db.withTransaction {
+        templates.updateItemRest(itemId, restSec.coerceIn(0, MAX_REST_SEC))
+        touchItem(itemId)
+    }
+
+    suspend fun setItemNote(itemId: Long, note: String) = db.withTransaction {
+        val clean = note.trim().take(MAX_TEXT)
+        if (templates.getItem(itemId)?.note == clean) return@withTransaction
+        templates.updateItemNote(itemId, clean)
+        touchItem(itemId)
+    }
+
+    /** Sobe ([delta] < 0) ou desce o exercício na ordem do treino. */
+    suspend fun moveTemplateItem(itemId: Long, delta: Int) = db.withTransaction {
+        val item = templates.getItem(itemId) ?: return@withTransaction
+        val items = templates.getItems(item.templateId).toMutableList()
+        val from = items.indexOfFirst { it.id == itemId }
+        val to = (from + delta).coerceIn(0, items.lastIndex)
+        if (from < 0 || from == to) return@withTransaction
+        items.add(to, items.removeAt(from))
+        // Regrava todas as posições: as antigas podem ter buracos de exercícios removidos.
+        items.forEachIndexed { index, it -> if (it.position != index) templates.updateItemPosition(it.id, index) }
+        templates.touch(listOf(item.templateId), clock())
+    }
+
+    suspend fun removeTemplateItem(itemId: Long) = db.withTransaction {
+        touchItem(itemId)
+        templates.deleteItem(itemId)
+    }
+
+    private suspend fun touchItem(itemId: Long) {
+        templates.getItem(itemId)?.let { templates.touch(listOf(it.templateId), clock()) }
+    }
 
     /** Refaz as sessões de hoje em diante que ninguém começou, para refletir o plano novo. */
-    private suspend fun refreshUpcomingSessions() {
+    internal suspend fun refreshUpcomingSessions() {
         val date = today()
         sessions.deleteUntouchedFrom(date)
         ensureWeek(WeekLogic.weekStartOf(date))
@@ -423,8 +648,28 @@ class TrainingRepository(
     }
 }
 
+const val MAX_REST_SEC = 600
+
+/** Limite de observações e comentários: cabe na tela e no painel. */
+const val MAX_TEXT = 300
+
+fun templateKey(remoteId: String) = "template:$remoteId"
+
+fun exerciseKey(exerciseId: String) = "exercise:$exerciseId"
+
 /** Séries de cada exercício num treino fundido. */
 fun mergedSets(sets: Int) = (sets - 1).coerceAtLeast(2)
+
+/**
+ * A data de hoje como fluxo: confere a cada minuto enquanto alguém observa e emite quando o dia vira.
+ * Tela aberta de um dia para o outro (app em segundo plano à noite) passa sozinha para o dia novo.
+ */
+fun observeDate(today: () -> LocalDate): Flow<LocalDate> = flow {
+    while (true) {
+        emit(today())
+        delay(60_000)
+    }
+}.distinctUntilChanged()
 
 fun formatKg(kg: Double): String =
     if (kg % 1.0 == 0.0) kg.toInt().toString() else "%.1f".format(kg).replace('.', ',')

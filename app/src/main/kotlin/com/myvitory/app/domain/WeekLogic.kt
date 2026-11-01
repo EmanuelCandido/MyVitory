@@ -12,6 +12,9 @@ object WeekLogic {
 
     fun daysOf(weekStart: LocalDate): List<LocalDate> = (0L..6L).map { weekStart.plusDays(it) }
 
+    /** O recálculo só reorganiza a semana de hoje: treino perdido em outra semana fica só marcado. */
+    fun replanCovers(date: LocalDate, today: LocalDate): Boolean = weekStartOf(date) == weekStartOf(today)
+
     /** Dias da semana que têm treino no plano e ainda não têm sessão criada. */
     fun sessionsToCreate(
         weekStart: LocalDate,

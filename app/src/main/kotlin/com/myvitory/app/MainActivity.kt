@@ -41,6 +41,8 @@ class MainActivity : ComponentActivity() {
             Notifications.OPEN_WORKOUT -> if (sessionId > 0) AppLink.Workout(sessionId) else AppLink.Today
             Notifications.OPEN_MISSED -> if (sessionId > 0) AppLink.Missed(sessionId) else AppLink.Today
             Notifications.OPEN_TODAY -> AppLink.Today
+            Notifications.OPEN_WEIGHT -> AppLink.Weight
+            Notifications.OPEN_REPLAN -> AppLink.Replan
             else -> null
         }
     }

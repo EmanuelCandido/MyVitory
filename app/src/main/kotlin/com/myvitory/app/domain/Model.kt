@@ -9,6 +9,7 @@ enum class Muscle(val label: String, val recoveryHours: Int) {
     QUADS("Quadríceps", 72),
     HAMSTRINGS("Posterior", 72),
     GLUTES("Glúteos", 72),
+    ADDUCTORS("Adutores", 48),
     SHOULDERS("Ombros", 48),
     BICEPS("Bíceps", 48),
     TRICEPS("Tríceps", 48),

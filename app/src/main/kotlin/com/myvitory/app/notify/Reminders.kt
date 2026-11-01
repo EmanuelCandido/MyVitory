@@ -19,6 +19,7 @@ import com.myvitory.app.domain.DayState
 import com.myvitory.app.domain.ReminderLogic
 import com.myvitory.app.domain.SessionStatus
 import com.myvitory.app.domain.WeekLogic
+import com.myvitory.app.domain.WeightLogic
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.first
@@ -57,6 +58,12 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         when (inputData.getString(KEY_KIND)) {
             KIND_TODAY -> decider.today()?.let { showToday(applicationContext, it) }
             KIND_YESTERDAY -> decider.yesterday()?.let { showYesterday(applicationContext, it) }
+            KIND_WEIGHT -> {
+                val repo = app.container.weights
+                val weights = repo.all()
+                val today = repo.today()
+                if (WeightLogic.shouldNotify(weights, today)) showWeight(applicationContext, WeightLogic.daysSinceLast(weights, today))
+            }
         }
         return Result.success()
     }
@@ -65,10 +72,12 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         const val KEY_KIND = "kind"
         const val KIND_TODAY = "today"
         const val KIND_YESTERDAY = "yesterday"
+        const val KIND_WEIGHT = "weight"
         private const val WORK_TODAY = "lembrete-treino-do-dia"
         private const val WORK_YESTERDAY = "pergunta-dia-seguinte"
+        private const val WORK_WEIGHT = "pesagem-do-mes"
 
-        /** Agenda (ou cancela) os dois lembretes diários conforme os ajustes. */
+        /** Agenda (ou cancela) os lembretes diários conforme os ajustes. */
         fun schedule(context: Context, settings: AppSettings, now: LocalDateTime = LocalDateTime.now()) {
             val work = WorkManager.getInstance(context)
             if (settings.todayReminder) {
@@ -80,6 +89,12 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 enqueue(work, WORK_YESTERDAY, KIND_YESTERDAY, ReminderLogic.delayUntil(now, ReminderLogic.YESTERDAY_QUESTION_MINUTES).toMinutes())
             } else {
                 work.cancelUniqueWork(WORK_YESTERDAY)
+            }
+            // Roda todo dia, mas só avisa no 30º dia sem pesar (e de semana em semana depois disso).
+            if (settings.weightReminder) {
+                enqueue(work, WORK_WEIGHT, KIND_WEIGHT, ReminderLogic.delayUntil(now, ReminderLogic.WEIGHT_REMINDER_MINUTES).toMinutes())
+            } else {
+                work.cancelUniqueWork(WORK_WEIGHT)
             }
         }
 
@@ -103,6 +118,20 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
                     .setAutoCancel(true)
                     .setContentIntent(Notifications.openApp(context, 10, Notifications.OPEN_TODAY))
                     .addAction(0, "Começar treino", Notifications.openApp(context, 11, Notifications.OPEN_WORKOUT, session.id)),
+            )
+        }
+
+        /** [daysSince] null: nunca se pesou no app. */
+        fun showWeight(context: Context, daysSince: Long?) {
+            val text = if (daysSince == null) "Registre seu peso para acompanhar a evolução e ver a previsão do mês." else "Faz $daysSince dias desde a última pesagem."
+            Notifications.post(
+                context,
+                Notifications.ID_WEIGHT,
+                Notifications.base(context, Notifications.CHANNEL_REMINDERS)
+                    .setContentTitle("Hora de se pesar")
+                    .setContentText(text)
+                    .setAutoCancel(true)
+                    .setContentIntent(Notifications.openApp(context, 14, Notifications.OPEN_WEIGHT)),
             )
         }
 

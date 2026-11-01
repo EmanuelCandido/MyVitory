@@ -27,18 +27,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,14 +52,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -173,6 +180,11 @@ fun WorkoutScreen(sessionId: Long, onClose: () -> Unit, onOpenExercise: (String)
                         )
                     }
                 }
+                if (data != null && data.exercises.isNotEmpty()) {
+                    item(key = "comment") {
+                        CommentField(data.session.comment.orEmpty(), onCommit = vm::setComment)
+                    }
+                }
             }
         }
 
@@ -211,6 +223,32 @@ fun WorkoutScreen(sessionId: Long, onClose: () -> Unit, onOpenExercise: (String)
             containerColor = Palette.Surface,
         )
     }
+}
+
+/** "Como foi?": fica no histórico e aparece no painel do treinador. Salva quando o campo perde o foco. */
+@Composable
+private fun CommentField(comment: String, onCommit: (String) -> Unit) {
+    var text by remember(comment) { mutableStateOf(comment) }
+    val focus = LocalFocusManager.current
+    OutlinedTextField(
+        value = text,
+        onValueChange = { text = it.take(com.myvitory.app.data.MAX_TEXT) },
+        label = { Text("Como foi o treino? (opcional)") },
+        placeholder = { Text("Ex.: senti o joelho no agachamento", color = Palette.TextFaint) },
+        textStyle = MaterialTheme.typography.bodyMedium,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Palette.Lime,
+            unfocusedBorderColor = Palette.Line,
+            focusedLabelColor = Palette.Lime,
+            cursorColor = Palette.Lime,
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+            .onFocusChanged { if (!it.isFocused && text != comment) onCommit(text) },
+    )
 }
 
 @Composable
@@ -295,6 +333,14 @@ private fun ExerciseCard(
                         "↑ +${formatKg(s.increaseKg)} kg hoje: você bateu todas as repetições da última vez",
                         style = MaterialTheme.typography.bodySmall,
                         color = Palette.Lime,
+                    )
+                }
+                if (exercise.note.isNotBlank()) {
+                    Text(
+                        exercise.note,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Palette.Blue,
+                        modifier = Modifier.padding(top = 4.dp),
                     )
                 }
             }
@@ -431,7 +477,8 @@ private fun RestBar(timer: RestTimer, onMinus: () -> Unit, onPlus: () -> Unit, o
             delay(250)
         }
     }
-    val remaining = ((timer.endsAt - now + 999) / 1000).coerceAtLeast(0)
+    // O relógio anda a cada 250 ms, mas a barra só recompõe quando o segundo muda.
+    val remaining by remember(timer) { derivedStateOf { ((timer.endsAt - now + 999) / 1000).coerceAtLeast(0) } }
     val progress = 1f - remaining.toFloat() / timer.totalSec.coerceAtLeast(1)
     Column(Modifier.fillMaxWidth().background(Palette.Surface).navigationBarsPadding()) {
         LinearProgressIndicator(

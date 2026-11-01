@@ -2,7 +2,6 @@ package com.myvitory.app.ui.settings
 
 import android.Manifest
 import android.content.Intent
-import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,6 +52,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.myvitory.app.BuildConfig
+import com.myvitory.app.MyVitoryApp
 import com.myvitory.app.R
 import com.myvitory.app.data.settings.AppSettings
 import com.myvitory.app.domain.ReminderLogic
@@ -61,11 +61,12 @@ import com.myvitory.app.ui.appViewModel
 import com.myvitory.app.ui.components.AppIcon
 import com.myvitory.app.ui.components.SectionLabel
 import com.myvitory.app.ui.theme.Palette
+import com.myvitory.app.ui.update.UpdateSettingsRow
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenCoach: () -> Unit) {
     val vm = appViewModel { SettingsViewModel(it.settings, it.videos.searchEnabled) }
     val state by vm.settings.collectAsStateWithLifecycle(AppSettings())
     val context = LocalContext.current
@@ -90,7 +91,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     fun enableWithPermission(enable: () -> Unit) {
         if (Notifications.canPost(context)) {
             enable()
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        } else {
+            // canPost só é falso do Android 13 em diante, onde a permissão existe.
             pendingEnable = enable
             permission.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
@@ -109,7 +111,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Section("Lembretes")
-            if (!notificationsOn && (state.todayReminder || state.yesterdayQuestion)) {
+            if (!notificationsOn && (state.todayReminder || state.yesterdayQuestion || state.weightReminder)) {
                 Surface(shape = RoundedCornerShape(16.dp), color = Palette.OrangeSoft, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Notificações bloqueadas no Android. Os lembretes não vão aparecer.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
@@ -147,6 +149,13 @@ fun SettingsScreen(onBack: () -> Unit) {
                     checked = state.yesterdayQuestion,
                     onChange = { on -> if (on) enableWithPermission { scope.launch { vm.setYesterdayQuestion(true) } } else scope.launch { vm.setYesterdayQuestion(false) } },
                 )
+                HorizontalDivider(color = Palette.SurfaceHigh)
+                SwitchRow(
+                    title = "Lembrar de me pesar",
+                    subtitle = "Às 8h, quando passar um mês sem pesagem (e de semana em semana até você registrar).",
+                    checked = state.weightReminder,
+                    onChange = { on -> if (on) enableWithPermission { scope.launch { vm.setWeightReminder(true) } } else scope.launch { vm.setWeightReminder(false) } },
+                )
             }
 
             Section("Treino")
@@ -161,6 +170,22 @@ fun SettingsScreen(onBack: () -> Unit) {
                 InfoRow("Descanso na tela bloqueada", "A contagem aparece na notificação, com +15 s e Pular, e o celular vibra no fim.")
             }
 
+            // Só aparece no build com Firebase configurado (local.properties).
+            if ((context.applicationContext as MyVitoryApp).container.sync != null) {
+                Section("Treinador")
+                Card {
+                    Surface(onClick = onOpenCoach, color = Palette.Surface, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
+                        Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text("Painel do treinador", style = MaterialTheme.typography.titleMedium)
+                                Text("Seu treinador edita o plano pelo navegador.", style = MaterialTheme.typography.bodySmall, color = Palette.TextMuted)
+                            }
+                            AppIcon(R.drawable.ic_chevron_right, null, tint = Palette.TextMuted, size = 20.dp)
+                        }
+                    }
+                }
+            }
+
             Section("Vídeos")
             Card {
                 InfoRow(
@@ -171,7 +196,15 @@ fun SettingsScreen(onBack: () -> Unit) {
 
             Section("Sobre")
             Card {
-                InfoRow("MyVitory ${BuildConfig.VERSION_NAME}", "Seus treinos ficam só neste celular (e no backup do Google, se estiver ligado). Buscas e vídeos passam pelo YouTube.")
+                InfoRow(
+                    "MyVitory ${BuildConfig.VERSION_NAME}",
+                    "Seus treinos ficam neste celular (e no backup do Google, se estiver ligado). Só vão para a nuvem se você " +
+                        "conectar o painel do treinador. Buscas e vídeos passam pelo YouTube.",
+                )
+                if ((context.applicationContext as MyVitoryApp).container.updater != null) {
+                    HorizontalDivider(color = Palette.SurfaceHigh)
+                    UpdateSettingsRow()
+                }
             }
         }
     }

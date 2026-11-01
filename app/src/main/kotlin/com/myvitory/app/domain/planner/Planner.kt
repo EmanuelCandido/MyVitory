@@ -17,9 +17,17 @@ data class Workout(
     val exerciseCount: Int = 0,
     /** Treino perdido que foi fundido a este: os dois num dia só, com menos séries por exercício. */
     val mergedWith: Workout? = null,
+    /**
+     * Treino que um recálculo anterior já fundiu a este. Os dois seguem juntos ([loads] e [exerciseCount]
+     * já somam os dois) e não entra outra fusão.
+     */
+    val keptMergeTemplateId: Long? = null,
 ) {
     /** Este treino cobre [other]: é ele, ou [other] foi fundido a ele. */
     fun covers(other: Workout) = sessionId == other.sessionId || mergedWith?.sessionId == other.sessionId
+
+    /** Treino que vai junto no mesmo dia: a fusão desta proposta ou a que já existia. */
+    val mergedTemplateId: Long? get() = mergedWith?.templateId ?: keptMergeTemplateId
 }
 
 /** Um treino com data fixa: já feito (histórico) ou do plano da semana seguinte. */
@@ -124,7 +132,7 @@ object Planner {
         }
 
     private fun compatible(a: Workout, b: Workout): Boolean {
-        if (a.mergedWith != null || b.mergedWith != null) return false
+        if (a.mergedTemplateId != null || b.mergedTemplateId != null) return false
         if (a.exerciseCount + b.exerciseCount > MAX_MERGED_EXERCISES) return false
         val primaryA = a.loads.filterValues { it >= 1.0 }.keys
         return b.loads.any { (m, load) -> load >= 1.0 && m in primaryA }

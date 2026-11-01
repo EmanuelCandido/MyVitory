@@ -2,6 +2,7 @@ package com.myvitory.app.ui.exercise
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.myvitory.app.data.ExerciseMedia
 import com.myvitory.app.data.ExerciseTips
 import com.myvitory.app.data.TrainingRepository
 import com.myvitory.app.data.db.CachedVideoEntity
@@ -13,6 +14,8 @@ import com.myvitory.app.data.video.VideoRepository
 import com.myvitory.app.domain.Alternatives
 import com.myvitory.app.domain.ExerciseRef
 import com.myvitory.app.domain.VideoLinks
+import com.myvitory.app.ui.library.ExerciseDraft
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -53,6 +56,8 @@ data class ExerciseUiState(
     val canSwap: Boolean = false,
     val swapInPlan: Boolean = false,
     val history: List<ExerciseHistoryPoint> = emptyList(),
+    /** GIF do movimento (ExerciseDB); nulo em exercício criado pelo usuário. */
+    val gifUrl: String? = null,
 ) {
     val current: VideoItem? get() = videos.getOrNull(selected)
 }
@@ -93,6 +98,7 @@ class ExerciseViewModel(
             canSwap = swap,
             swapInPlan = inPlan,
             history = history,
+            gifUrl = ExerciseMedia.gifUrl(exerciseId),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExerciseUiState())
 
@@ -137,20 +143,34 @@ class ExerciseViewModel(
         return true
     }
 
+    fun updateExercise(draft: ExerciseDraft) {
+        viewModelScope.launch(NonCancellable) { training.updateExercise(exerciseId, draft.name, draft.equipment, draft.primary, draft.secondary) }
+    }
+
+    /** Devolve false quando o exercício está em algum treino ou no histórico. */
+    fun deleteExercise(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch { onResult(training.deleteExercise(exerciseId)) }
+    }
+
     fun setSwapInPlan(value: Boolean) {
         swapInPlan.value = value
     }
 
-    fun swap(to: ExerciseEntity, onSwapped: (undo: () -> Unit) -> Unit) {
+    /** [onSwapped] diz se o plano base mudou: "No plano todo" com um exercício que só este dia tem não muda. */
+    fun swap(to: ExerciseEntity, onSwapped: (inPlan: Boolean, undo: () -> Unit) -> Unit) {
         val session = sessionId ?: return
         viewModelScope.launch {
             val undo = training.swapExercise(session, exerciseId, to.id, swapInPlan.value) ?: return@launch
-            onSwapped { viewModelScope.launch { training.undoSwap(undo) } }
+            onSwapped(undo.changedBasePlan) { viewModelScope.launch { training.undoSwap(undo) } }
         }
     }
 
     private fun merge(pinned: PinnedVideoEntity?, results: List<CachedVideoEntity>): List<VideoItem> {
-        val fromSearch = results.filter { it.videoId != pinned?.videoId }.map {
+        // Vídeo escolhido de fábrica: toca sem chave da API, logo depois do fixado pelo usuário.
+        val builtIn = ExerciseMedia.video(exerciseId)?.takeIf { it.videoId != pinned?.videoId }?.let {
+            VideoItem(it.videoId, it.title, it.channel, it.durationSec, "https://i.ytimg.com/vi/${it.videoId}/mqdefault.jpg", pinned = false)
+        }
+        val fromSearch = results.filter { it.videoId != pinned?.videoId && it.videoId != builtIn?.videoId }.map {
             VideoItem(it.videoId, it.title, it.channel, it.durationSec, it.thumbnailUrl, pinned = false)
         }
         val fixed = pinned?.let { p ->
@@ -164,7 +184,7 @@ class ExerciseViewModel(
                 pinned = true,
             )
         }
-        return listOfNotNull(fixed) + fromSearch
+        return listOfNotNull(fixed, builtIn) + fromSearch
     }
 
     private fun alternativesFor(target: ExerciseEntity, all: List<ExerciseEntity>): List<ExerciseEntity> {

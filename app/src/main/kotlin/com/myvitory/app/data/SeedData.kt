@@ -2,6 +2,7 @@ package com.myvitory.app.data
 
 import com.myvitory.app.data.db.ExerciseEntity
 import com.myvitory.app.domain.Muscle.ABS
+import com.myvitory.app.domain.Muscle.ADDUCTORS
 import com.myvitory.app.domain.Muscle.BACK
 import com.myvitory.app.domain.Muscle.BICEPS
 import com.myvitory.app.domain.Muscle.CALVES
@@ -52,6 +53,55 @@ object SeedData {
         ExerciseEntity("crucifixo_invertido", "Crucifixo invertido", "Máquina", listOf(SHOULDERS), listOf(BACK)),
         ExerciseEntity("abdominal_polia", "Abdominal na polia", "Polia", listOf(ABS), emptyList()),
         ExerciseEntity("elevacao_pernas", "Elevação de pernas", "Peso corporal", listOf(ABS), emptyList()),
+        // Catálogo ampliado (v0.7): chega também a quem já usa o app.
+        ExerciseEntity("supino_reto_halteres", "Supino reto com halteres", "Halteres", listOf(CHEST), listOf(TRICEPS, SHOULDERS)),
+        ExerciseEntity("supino_inclinado_barra", "Supino inclinado com barra", "Barra", listOf(CHEST), listOf(SHOULDERS, TRICEPS)),
+        ExerciseEntity("supino_declinado", "Supino declinado com barra", "Barra", listOf(CHEST), listOf(TRICEPS)),
+        ExerciseEntity("supino_maquina", "Supino na máquina", "Máquina", listOf(CHEST), listOf(TRICEPS, SHOULDERS)),
+        ExerciseEntity("crucifixo_halteres", "Crucifixo com halteres", "Halteres", listOf(CHEST), emptyList()),
+        ExerciseEntity("pullover", "Pullover com halter", "Halter", listOf(CHEST), listOf(BACK)),
+        ExerciseEntity("triceps_corda", "Tríceps na corda", "Polia", listOf(TRICEPS), emptyList()),
+        ExerciseEntity("triceps_testa", "Tríceps testa", "Barra", listOf(TRICEPS), emptyList()),
+        ExerciseEntity("triceps_coice", "Tríceps coice", "Halter", listOf(TRICEPS), emptyList()),
+        ExerciseEntity("supino_fechado", "Supino fechado", "Barra", listOf(TRICEPS), listOf(CHEST)),
+        ExerciseEntity("mergulho_banco", "Mergulho no banco", "Peso corporal", listOf(TRICEPS), listOf(CHEST, SHOULDERS)),
+        ExerciseEntity("puxada_triangulo", "Puxada com triângulo", "Polia", listOf(BACK), listOf(BICEPS)),
+        ExerciseEntity("pulldown_braco_estendido", "Pulldown com braços estendidos", "Polia", listOf(BACK), emptyList()),
+        ExerciseEntity("remada_cavalinho", "Remada cavalinho", "Máquina", listOf(BACK), listOf(BICEPS)),
+        ExerciseEntity("remada_maquina", "Remada na máquina", "Máquina", listOf(BACK), listOf(BICEPS)),
+        ExerciseEntity("barra_fixa_supinada", "Barra fixa supinada", "Peso corporal", listOf(BACK), listOf(BICEPS)),
+        ExerciseEntity("hiperextensao", "Hiperextensão lombar", "Peso corporal", listOf(BACK), listOf(GLUTES, HAMSTRINGS)),
+        ExerciseEntity("encolhimento", "Encolhimento com halteres", "Halteres", listOf(BACK), emptyList()),
+        ExerciseEntity("rosca_scott", "Rosca Scott", "Barra", listOf(BICEPS), listOf(FOREARMS)),
+        ExerciseEntity("rosca_barra_w", "Rosca com barra W", "Barra", listOf(BICEPS), listOf(FOREARMS)),
+        ExerciseEntity("rosca_concentrada", "Rosca concentrada", "Halter", listOf(BICEPS), emptyList()),
+        ExerciseEntity("rosca_polia", "Rosca na polia", "Polia", listOf(BICEPS), listOf(FOREARMS)),
+        ExerciseEntity("rosca_punho", "Rosca de punho", "Barra", listOf(FOREARMS), emptyList()),
+        ExerciseEntity("rosca_punho_inversa", "Rosca de punho inversa", "Barra", listOf(FOREARMS), emptyList()),
+        ExerciseEntity("agachamento_smith", "Agachamento no Smith", "Smith", listOf(QUADS), listOf(GLUTES, HAMSTRINGS)),
+        ExerciseEntity("agachamento_frontal", "Agachamento frontal", "Barra", listOf(QUADS), listOf(GLUTES)),
+        ExerciseEntity("agachamento_goblet", "Agachamento goblet", "Halter", listOf(QUADS), listOf(GLUTES)),
+        ExerciseEntity("afundo", "Afundo com halteres", "Halteres", listOf(QUADS), listOf(GLUTES)),
+        ExerciseEntity("subida_banco", "Subida no banco", "Halteres", listOf(QUADS), listOf(GLUTES)),
+        ExerciseEntity("cadeira_flexora", "Cadeira flexora", "Máquina", listOf(HAMSTRINGS), emptyList()),
+        ExerciseEntity("stiff_halteres", "Stiff com halteres", "Halteres", listOf(HAMSTRINGS), listOf(GLUTES)),
+        ExerciseEntity("bom_dia", "Good morning", "Barra", listOf(HAMSTRINGS), listOf(GLUTES, BACK)),
+        ExerciseEntity("terra_sumo", "Levantamento terra sumô", "Barra", listOf(GLUTES), listOf(HAMSTRINGS, QUADS, ADDUCTORS)),
+        ExerciseEntity("cadeira_adutora", "Cadeira adutora", "Máquina", listOf(ADDUCTORS), emptyList()),
+        ExerciseEntity("aducao_polia", "Adução na polia", "Polia", listOf(ADDUCTORS), emptyList()),
+        ExerciseEntity("gluteo_polia", "Glúteo na polia", "Polia", listOf(GLUTES), listOf(HAMSTRINGS)),
+        ExerciseEntity("gluteo_maquina", "Glúteo na máquina", "Máquina", listOf(GLUTES), listOf(HAMSTRINGS)),
+        ExerciseEntity("desenvolvimento_maquina", "Desenvolvimento na máquina", "Máquina", listOf(SHOULDERS), listOf(TRICEPS)),
+        ExerciseEntity("desenvolvimento_arnold", "Desenvolvimento Arnold", "Halteres", listOf(SHOULDERS), listOf(TRICEPS)),
+        ExerciseEntity("elevacao_frontal", "Elevação frontal", "Halteres", listOf(SHOULDERS), emptyList()),
+        ExerciseEntity("elevacao_lateral_polia", "Elevação lateral na polia", "Polia", listOf(SHOULDERS), emptyList()),
+        ExerciseEntity("crucifixo_invertido_halteres", "Crucifixo invertido com halteres", "Halteres", listOf(SHOULDERS), listOf(BACK)),
+        ExerciseEntity("remada_alta", "Remada alta", "Barra", listOf(SHOULDERS), listOf(BACK)),
+        ExerciseEntity("abdominal_supra", "Abdominal supra", "Peso corporal", listOf(ABS), emptyList()),
+        ExerciseEntity("abdominal_infra", "Abdominal infra", "Peso corporal", listOf(ABS), emptyList()),
+        ExerciseEntity("abdominal_obliquo", "Abdominal oblíquo", "Peso corporal", listOf(ABS), emptyList()),
+        ExerciseEntity("abdominal_maquina", "Abdominal na máquina", "Máquina", listOf(ABS), emptyList()),
+        ExerciseEntity("prancha", "Prancha", "Peso corporal", listOf(ABS), emptyList()),
     )
 
     data class Item(val exerciseId: String, val sets: Int, val reps: Int, val restSec: Int)

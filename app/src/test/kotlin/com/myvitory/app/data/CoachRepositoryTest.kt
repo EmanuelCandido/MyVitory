@@ -6,6 +6,8 @@ import com.myvitory.app.data.db.MyVitoryDatabase
 import com.myvitory.app.domain.DayState
 import com.myvitory.app.domain.Muscle
 import com.myvitory.app.domain.SessionStatus
+import com.myvitory.app.domain.planner.Proposal
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlinx.coroutines.flow.first
@@ -37,7 +39,7 @@ class CoachRepositoryTest {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), MyVitoryDatabase::class.java).build()
         training = TrainingRepository(db, today = { today }, clock = { nowMillis })
         coach = CoachRepository(db, today = { today }, clock = { nowMillis }, zone = ZoneOffset.UTC)
-        training.seedIfEmpty()
+        TrainingRepository(db, today = { monday }).seedIfEmpty()
         training.ensureWeek(monday)
         val week = training.observeWeek(monday).first()
         training.markSession(week[0].session!!.id, SessionStatus.DONE)
@@ -143,6 +145,98 @@ class CoachRepositoryTest {
     }
 
     @Test
+    fun `mudar o plano base ou renomear um treino não desfaz o recálculo`() = runBlocking {
+        val data = coach.buildReplan()!!
+        coach.apply(data, data.result.best)
+        val legsId = week()[3].session!!.templateId!!
+
+        training.renameTemplate(legsId, "Pernas A")
+        training.setPlanDay(DayOfWeek.MONDAY, null) // refaz os dias que ninguém começou
+        val after = week()
+        assertEquals("Pernas A", after[3].session?.name)
+        assertEquals(legsId, after[3].session?.templateId)
+        assertTrue(after[3].special)
+        assertEquals("Ombros + Abdômen", after[4].session?.name)
+        assertEquals("Posterior + Glúteos", after[6].session?.name)
+        assertEquals(today, after[2].session?.movedTo)
+        assertTrue(coach.observePendingMissed().first().isEmpty())
+    }
+
+    @Test
+    fun `voltar ao plano base num dia recalculado reabre o treino perdido`() = runBlocking {
+        val data = coach.buildReplan()!!
+        coach.apply(data, data.result.best)
+
+        assertTrue(training.resetDayToPlan(today))
+        assertEquals("Ombros + Abdômen", week()[3].session?.name)
+        assertNull(week()[2].session?.movedTo)
+        assertEquals(1, coach.observePendingMissed().first().size)
+    }
+
+    @Test
+    fun `segundo recálculo mantém a fusão do primeiro`() = runBlocking {
+        training.setUnavailable(monday.plusDays(5), true)
+        training.setUnavailable(monday.plusDays(6), true)
+        val first = coach.buildReplan()!!
+        coach.apply(first, first.result.best)
+        val mergedDate = first.result.best.assignment.entries.single { it.value.mergedWith != null }.key
+        val merged = week().first { it.date == mergedDate }.session!!
+
+        // Falta mais um dia na mesma semana.
+        val other = week().first { it.date != mergedDate && it.date >= today && it.session?.status == SessionStatus.PLANNED }
+        training.markSession(other.session!!.id, SessionStatus.MISSED)
+        val second = coach.buildReplan()!!
+        val kept = second.input.pending.single { it.sessionId == merged.id }
+        assertEquals(merged.mergedTemplateId, kept.keptMergeTemplateId)
+        assertEquals(10, kept.exerciseCount)
+        coach.apply(second, second.result.best)
+
+        val newDate = second.result.best.dateOf(kept)
+        assertNotNull(newDate)
+        val day = week().first { it.date == newDate }
+        assertEquals("Pernas + Posterior + Glúteos", day.session?.name)
+        assertEquals(merged.mergedTemplateId, day.session?.mergedTemplateId)
+        assertEquals(9, day.exerciseCount)
+        assertEquals(newDate, week()[2].session?.movedTo)
+    }
+
+    @Test
+    fun `perdido de um recálculo anterior acompanha o treino quando ele muda de dia`() = runBlocking {
+        val first = coach.buildReplan()!!
+        coach.apply(first, first.result.best) // Pernas de quarta foi para hoje (quinta)
+        val friday = today.plusDays(1)
+        training.setUnavailable(friday, true)
+
+        val second = coach.buildReplan()!!
+        val saturday = today.plusDays(2)
+        val sunday = today.plusDays(3)
+        val legs = second.input.pending.single { !it.missed && it.originalDate == today }
+        val shoulders = second.input.pending.single { it.missed }
+        val posterior = second.input.pending.single { !it.missed && it.originalDate == sunday }
+        // Ombros (perdido na sexta) fica com hoje e empurra Pernas para sábado.
+        val proposal = Proposal(mapOf(today to shoulders, saturday to legs, sunday to posterior), emptyList(), 0.0)
+        val undo = coach.apply(second, proposal)
+        assertEquals(saturday, week()[2].session?.movedTo)
+        assertEquals("Pernas", week()[5].session?.name)
+
+        coach.undo(undo)
+        assertEquals(today, week()[2].session?.movedTo)
+    }
+
+    @Test
+    fun `exercício próprio criado depois conta na recuperação`() = runBlocking {
+        coach.observeRecoveryEvents().first() // o catálogo já foi lido uma vez
+        val thursday = week()[3].session!!
+        val id = training.createExercise("Adução na polia", "Polia", listOf(Muscle.ADDUCTORS), emptyList())
+        training.addExerciseToTemplate(thursday.templateId!!, id)
+        assertEquals(1.0, coach.observeTodayLoads().first()!!.loads[Muscle.ADDUCTORS])
+
+        training.markSession(thursday.id, SessionStatus.DONE)
+        val muscles = coach.recoveryNow(coach.observeRecoveryEvents().first()).associateBy { it.muscle }
+        assertFalse(muscles.getValue(Muscle.ADDUCTORS).ready)
+    }
+
+    @Test
     fun `nível iniciante soma 24 h nas janelas`() = runBlocking {
         val beginner = CoachRepository(db, today = { today }, clock = { nowMillis }, zone = ZoneOffset.UTC, extraRecoveryHours = { 24 })
         val data = beginner.buildReplan()!!
@@ -159,6 +253,19 @@ class CoachRepositoryTest {
         assertEquals("Ombros + Abdômen", week()[3].session?.name)
         coach.undo(undo)
         assertFalse(coach.observePendingMissed().first().isEmpty())
+    }
+
+    @Test
+    fun `treino de ontem registrado hoje conta no horário de ontem`() = runBlocking {
+        val wednesday = week()[2].session!!
+        training.markSession(wednesday.id, SessionStatus.PLANNED) // "Fiz parte" depois de ter marcado perdido
+        training.startWorkout(wednesday.id)
+        training.observeWorkout(wednesday.id).first()!!.exercises.flatMap { it.sets }.forEach { training.updateSet(it.copy(done = true)) }
+        assertEquals(SessionStatus.DONE, training.finishWorkout(wednesday.id))
+
+        val quads = coach.recoveryNow(coach.observeRecoveryEvents().first()).first { it.muscle == Muscle.QUADS }
+        // Quarta às 19h até quinta às 9h = 14 de 72 h (e não 0%, como se tivesse treinado agora).
+        assertEquals(19, quads.percent)
     }
 
     @Test

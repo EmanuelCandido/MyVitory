@@ -21,9 +21,14 @@ object Notifications {
     const val CHANNEL_REMINDERS = "lembretes"
     const val CHANNEL_REST = "descanso"
     const val CHANNEL_REST_DONE = "descanso_fim"
+    const val CHANNEL_COACH = "treinador"
+    const val CHANNEL_UPDATES = "atualizacoes"
 
     const val ID_TODAY = 1001
     const val ID_YESTERDAY = 1002
+    const val ID_WEIGHT = 1003
+    const val ID_COACH = 1004
+    const val ID_UPDATE = 1005
     const val ID_REST = 2001
     const val ID_REST_DONE = 2002
 
@@ -32,14 +37,15 @@ object Notifications {
     const val OPEN_WORKOUT = "workout"
     const val OPEN_MISSED = "missed"
     const val OPEN_TODAY = "today"
+    const val OPEN_WEIGHT = "weight"
+    const val OPEN_REPLAN = "replan"
 
     fun createChannels(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java)
         manager.createNotificationChannels(
             listOf(
                 NotificationChannel(CHANNEL_REMINDERS, "Lembretes de treino", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Treino do dia e a pergunta se você treinou ontem."
+                    description = "Treino do dia, a pergunta se você treinou ontem e a pesagem do mês."
                 },
                 NotificationChannel(CHANNEL_REST, "Descanso em andamento", NotificationManager.IMPORTANCE_LOW).apply {
                     description = "Contagem do descanso entre séries."
@@ -49,6 +55,12 @@ object Notifications {
                     description = "Avisa quando é hora da próxima série."
                     enableVibration(true)
                     vibrationPattern = REST_DONE_PATTERN
+                },
+                NotificationChannel(CHANNEL_COACH, "Painel do treinador", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = "Avisa quando o treinador muda o seu treino pelo painel."
+                },
+                NotificationChannel(CHANNEL_UPDATES, "Atualizações do app", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = "Versão nova disponível e atualização concluída."
                 },
             )
         )

@@ -8,6 +8,7 @@ import com.myvitory.app.data.db.SetLogEntity
 import com.myvitory.app.domain.SessionStatus
 import com.myvitory.app.timer.RestTimer
 import com.myvitory.app.timer.RestTimerHandle
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -29,11 +30,12 @@ class WorkoutViewModel(
     /** O descanso vive fora da tela (serviço com notificação) para continuar com o celular bloqueado. */
     val rest: StateFlow<RestTimer?> = restTimer.state
 
-    /** Marcar uma série inicia o descanso sozinho. */
+    /** Marcar uma série inicia o descanso sozinho, só no treino de hoje (registrar um dia passado não descansa). */
     fun toggleSet(log: SetLogEntity, exerciseName: String) {
         val nowDone = !log.done
         viewModelScope.launch { repo.updateSet(log.copy(done = nowDone)) }
-        if (nowDone && log.restSec > 0) restTimer.start(log.restSec, "Próxima: $exerciseName") else restTimer.skip()
+        val live = workout.value?.session?.date == repo.today()
+        if (nowDone && live && log.restSec > 0) restTimer.start(log.restSec, "Próxima: $exerciseName") else restTimer.skip()
     }
 
     fun setWeight(log: SetLogEntity, kg: Double) {
@@ -48,6 +50,11 @@ class WorkoutViewModel(
 
     fun addSet(exerciseId: String) {
         viewModelScope.launch { repo.addSet(sessionId, exerciseId) }
+    }
+
+    fun setComment(comment: String) {
+        // NonCancellable: salva ao perder o foco, o que pode acontecer ao sair da tela.
+        viewModelScope.launch(NonCancellable) { repo.setSessionComment(sessionId, comment) }
     }
 
     fun adjustRest(deltaSec: Int) = restTimer.adjust(deltaSec)

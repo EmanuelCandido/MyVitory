@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,12 +35,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,19 +59,32 @@ import com.myvitory.app.data.db.ExerciseEntity
 import com.myvitory.app.data.db.TemplateItemRow
 import com.myvitory.app.ui.appViewModel
 import com.myvitory.app.ui.components.AppIcon
+import com.myvitory.app.ui.components.ExerciseThumb
 import com.myvitory.app.ui.components.SectionLabel
+import com.myvitory.app.ui.components.formatClock
+import com.myvitory.app.ui.components.long
+import com.myvitory.app.ui.components.twoDigits
 import com.myvitory.app.ui.theme.Palette
 
 @Composable
-fun TemplateEditorScreen(templateId: Long, onBack: () -> Unit) {
+fun TemplateEditorScreen(templateId: Long, onBack: () -> Unit, onOpenExercise: (String) -> Unit) {
     val vm = appViewModel(key = "template-$templateId") { TemplateEditorViewModel(it.training, templateId) }
     val state by vm.state.collectAsStateWithLifecycle()
-    var adding by remember { mutableStateOf(false) }
+    // Salvos: ao voltar do vídeo, a folha de adicionar reabre no mesmo exercício.
+    var adding by rememberSaveable { mutableStateOf(false) }
+    var previewId by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmDelete by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().background(Palette.Ground).statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) { AppIcon(R.drawable.ic_arrow_back, "Voltar") }
-            Text("Editar treino", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text("Editar treino", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).semantics { heading() })
+            // Cópia "só nesta semana" some sozinha quando o dia passa; só o treino do plano base é apagado aqui.
+            if (state.template?.weekOnly == false) {
+                IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(48.dp)) {
+                    AppIcon(R.drawable.ic_trash, "Apagar treino", tint = Palette.TextMuted, size = 20.dp)
+                }
+            }
         }
 
         LazyColumn(
@@ -79,17 +95,34 @@ fun TemplateEditorScreen(templateId: Long, onBack: () -> Unit) {
             item {
                 state.template?.let { template ->
                     NameField(template.code, template.name, onCommit = vm::rename)
+                    if (template.weekOnly) {
+                        val day = state.weekOnlyDay
+                        Text(
+                            (if (day != null) "Só para ${day.dayOfWeek.long().lowercase()}, ${day.dayOfMonth.twoDigits()}/${day.monthValue.twoDigits()}. " else "Só para um dia desta semana. ") +
+                                "O plano base não muda.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Palette.Lime,
+                            modifier = Modifier.padding(start = 4.dp, top = 10.dp),
+                        )
+                    }
                 }
             }
             item {
                 SectionLabel("Exercícios · ${state.items.size}", Modifier.padding(start = 4.dp, top = 16.dp, bottom = 4.dp))
             }
             items(state.items, key = { it.id }) { item ->
+                val index = state.items.indexOf(item)
                 ItemCard(
                     item = item,
+                    canMoveUp = index > 0,
+                    canMoveDown = index < state.items.lastIndex,
+                    onMove = { vm.move(item, it) },
                     onSets = { vm.changeSets(item, it) },
                     onReps = { vm.changeReps(item, it) },
+                    onRest = { vm.changeRest(item, it) },
+                    onNote = { vm.setNote(item, it) },
                     onRemove = { vm.remove(item) },
+                    onOpen = { onOpenExercise(item.exerciseId) },
                 )
             }
             item {
@@ -109,12 +142,33 @@ fun TemplateEditorScreen(templateId: Long, onBack: () -> Unit) {
         }
     }
 
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Apagar ${state.template?.name.orEmpty()}?") },
+            text = {
+                Text(
+                    "Os dias do plano com este treino viram descanso e ele sai dos próximos dias. " +
+                        "Os treinos que você já fez continuam no histórico.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmDelete = false; vm.delete(onBack) }) { Text("Apagar", color = Palette.Orange) }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } },
+            containerColor = Palette.SurfaceHigh,
+        )
+    }
+
     if (adding) {
         AddExerciseSheet(
             catalog = state.catalog,
             alreadyIn = state.items.map { it.exerciseId }.toSet(),
-            onPick = { adding = false; vm.add(it.id) },
-            onDismiss = { adding = false },
+            previewId = previewId,
+            onPreview = { previewId = it },
+            onPick = { adding = false; previewId = null; vm.add(it.id) },
+            onOpenExercise = onOpenExercise,
+            onDismiss = { adding = false; previewId = null },
         )
     }
 }
@@ -144,25 +198,75 @@ private fun NameField(code: String, name: String, onCommit: (String) -> Unit) {
 }
 
 @Composable
-private fun ItemCard(item: TemplateItemRow, onSets: (Int) -> Unit, onReps: (Int) -> Unit, onRemove: () -> Unit) {
+private fun ItemCard(
+    item: TemplateItemRow,
+    canMoveUp: Boolean,
+    canMoveDown: Boolean,
+    onMove: (Int) -> Unit,
+    onSets: (Int) -> Unit,
+    onReps: (Int) -> Unit,
+    onRest: (Int) -> Unit,
+    onNote: (String) -> Unit,
+    onRemove: () -> Unit,
+    onOpen: () -> Unit,
+) {
     Surface(shape = RoundedCornerShape(18.dp), color = Palette.Surface, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 14.dp)) {
+        Column(Modifier.padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(item.exerciseName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                // Foto e nome abrem o exercício (movimento, vídeo, pontos-chave).
+                Row(
+                    Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable(onClick = onOpen).padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    ExerciseThumb(item.exerciseId, 40.dp)
+                    Text(item.exerciseName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                }
+                IconButton(onClick = { onMove(-1) }, enabled = canMoveUp, modifier = Modifier.size(40.dp)) {
+                    AppIcon(R.drawable.ic_chevron_up, "Subir ${item.exerciseName}", tint = if (canMoveUp) Palette.TextMuted else Palette.Neutral, size = 20.dp)
+                }
+                IconButton(onClick = { onMove(1) }, enabled = canMoveDown, modifier = Modifier.size(40.dp)) {
+                    AppIcon(R.drawable.ic_chevron_down, "Descer ${item.exerciseName}", tint = if (canMoveDown) Palette.TextMuted else Palette.Neutral, size = 20.dp)
+                }
                 IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
                     AppIcon(R.drawable.ic_trash, "Remover ${item.exerciseName}", tint = Palette.TextMuted, size = 20.dp)
                 }
             }
-            Row(Modifier.padding(end = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Stepper("Séries", item.sets, onSets, Modifier.weight(1f))
-                Stepper("Reps", item.reps, onReps, Modifier.weight(1f))
+            Row(Modifier.padding(end = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Stepper("Séries", "${item.sets}", onSets, Modifier.weight(1f))
+                Stepper("Reps", "${item.reps}", onReps, Modifier.weight(1f))
+                Stepper("Descanso", formatClock(item.restSec.toLong()), onRest, Modifier.weight(1.2f))
             }
+            NoteField(item.note, onNote, Modifier.padding(end = 12.dp))
         }
     }
 }
 
+/** Observação do exercício, salva quando o campo perde o foco (como o nome do treino). */
 @Composable
-private fun Stepper(label: String, value: Int, onDelta: (Int) -> Unit, modifier: Modifier = Modifier) {
+private fun NoteField(note: String, onCommit: (String) -> Unit, modifier: Modifier = Modifier) {
+    var text by remember(note) { mutableStateOf(note) }
+    val focus = LocalFocusManager.current
+    OutlinedTextField(
+        value = text,
+        onValueChange = { text = it.take(com.myvitory.app.data.MAX_TEXT) },
+        placeholder = { Text("Observação (ex.: descer em 3 s)", color = Palette.TextFaint) },
+        textStyle = MaterialTheme.typography.bodyMedium,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Palette.Lime,
+            unfocusedBorderColor = Palette.Line,
+            cursorColor = Palette.Lime,
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .onFocusChanged { if (!it.isFocused && text != note) onCommit(text) },
+    )
+}
+
+@Composable
+private fun Stepper(label: String, value: String, onDelta: (Int) -> Unit, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SectionLabel(label)
         Row(
@@ -173,81 +277,14 @@ private fun Stepper(label: String, value: Int, onDelta: (Int) -> Unit, modifier:
                 .border(1.dp, Palette.LineStrong, CircleShape),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(Modifier.size(48.dp).clickable { onDelta(-1) }, Alignment.Center) {
+            Box(Modifier.size(40.dp, 48.dp).clickable { onDelta(-1) }, Alignment.Center) {
                 AppIcon(R.drawable.ic_minus, "Diminuir $label", size = 18.dp)
             }
-            Text("$value", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Box(Modifier.size(48.dp).clickable { onDelta(1) }, Alignment.Center) {
+            Text(value, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1)
+            Box(Modifier.size(40.dp, 48.dp).clickable { onDelta(1) }, Alignment.Center) {
                 AppIcon(R.drawable.ic_plus, "Aumentar $label", size = 18.dp)
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AddExerciseSheet(
-    catalog: List<ExerciseEntity>,
-    alreadyIn: Set<String>,
-    onPick: (ExerciseEntity) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var query by remember { mutableStateOf("") }
-    val filtered = remember(catalog, query) {
-        val q = query.trim().lowercase()
-        catalog
-            .filter { q.isEmpty() || it.name.lowercase().contains(q) || it.primary.any { m -> m.label.lowercase().contains(q) } }
-            .groupBy { it.primary.firstOrNull()?.label ?: "Outros" }
-            .toSortedMap()
-    }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Palette.Surface,
-    ) {
-        Column(Modifier.fillMaxHeight(0.85f).navigationBarsPadding().imePadding()) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = { Text("Buscar exercício ou músculo") },
-                singleLine = true,
-                leadingIcon = { AppIcon(R.drawable.ic_search, null, tint = Palette.TextMuted, size = 20.dp) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Palette.Lime,
-                    unfocusedBorderColor = Palette.LineStrong,
-                    cursorColor = Palette.Lime,
-                ),
-                shape = CircleShape,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            )
-            LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp)) {
-                filtered.forEach { (group, exercises) ->
-                    item(key = "h-$group") { SectionLabel(group, Modifier.padding(start = 4.dp, top = 16.dp, bottom = 4.dp)) }
-                    items(exercises, key = { it.id }) { exercise ->
-                        val inTemplate = exercise.id in alreadyIn
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 56.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onPick(exercise) }
-                                .padding(horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(exercise.name, style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    exercise.equipment + if (inTemplate) " · já está no treino" else "",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Palette.TextMuted,
-                                )
-                            }
-                            AppIcon(R.drawable.ic_plus, "Adicionar ${exercise.name}", tint = Palette.Lime, size = 20.dp)
-                            Box(Modifier.width(8.dp))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}

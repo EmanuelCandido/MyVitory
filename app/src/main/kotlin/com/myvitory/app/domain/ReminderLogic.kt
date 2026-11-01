@@ -6,6 +6,7 @@ import java.time.LocalTime
 
 object ReminderLogic {
     const val YESTERDAY_QUESTION_MINUTES = 9 * 60
+    const val WEIGHT_REMINDER_MINUTES = 8 * 60
 
     /** Quanto falta até o próximo [minutesOfDay] (hoje, se ainda não passou; senão amanhã). */
     fun delayUntil(now: LocalDateTime, minutesOfDay: Int): Duration {

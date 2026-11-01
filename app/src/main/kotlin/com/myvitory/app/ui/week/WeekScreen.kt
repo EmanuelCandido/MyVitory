@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -29,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -47,13 +50,16 @@ import com.myvitory.app.data.DayView
 import com.myvitory.app.data.PlanRow
 import com.myvitory.app.data.TemplateSummary
 import com.myvitory.app.data.db.SessionEntity
+import com.myvitory.app.data.db.TemplateItemRow
 import com.myvitory.app.domain.DayState
 import com.myvitory.app.domain.SessionStatus
+import com.myvitory.app.domain.WeekLogic
 import com.myvitory.app.ui.LocalUndo
 import com.myvitory.app.ui.appViewModel
 import com.myvitory.app.ui.components.AppIcon
 import com.myvitory.app.ui.components.PillTabs
 import com.myvitory.app.ui.components.SectionLabel
+import com.myvitory.app.ui.components.SessionExerciseList
 import com.myvitory.app.ui.components.StatusMark
 import com.myvitory.app.ui.components.Tag
 import com.myvitory.app.ui.components.label
@@ -62,6 +68,7 @@ import com.myvitory.app.ui.components.short
 import com.myvitory.app.ui.components.twoDigits
 import com.myvitory.app.ui.components.weekRangeLabel
 import com.myvitory.app.ui.theme.Palette
+import kotlinx.coroutines.flow.flowOf
 
 @Composable
 fun WeekScreen(
@@ -69,11 +76,12 @@ fun WeekScreen(
     onOpenWorkout: (Long) -> Unit,
     onOpenTemplate: (Long) -> Unit,
     onOpenReplan: () -> Unit,
+    onOpenExercise: (String) -> Unit,
 ) {
     val vm = appViewModel { WeekViewModel(it.training) }
     val state by vm.state.collectAsStateWithLifecycle()
     val undo = LocalUndo.current
-    var tab by rememberSaveable { mutableStateOf(0) }
+    var tab by rememberSaveable { mutableIntStateOf(0) }
     var daySheet by remember { mutableStateOf<DayView?>(null) }
     var planSheet by remember { mutableStateOf<PlanRow?>(null) }
 
@@ -130,8 +138,32 @@ fun WeekScreen(
 
     daySheet?.let { day ->
         val session = day.session
+        val items by remember(session?.id, session?.templateId, session?.mergedTemplateId) {
+            session?.let { vm.itemsFor(it) } ?: flowOf(emptyList())
+        }.collectAsStateWithLifecycle(emptyList())
+        val notChanged: (Boolean) -> Unit = { ok -> if (!ok) undo.show("Esse dia já foi começado e não pode mudar", null) }
         DayActionsSheet(
             day = day,
+            items = items,
+            templates = state.templates,
+            canChangeThisWeek = !day.date.isBefore(state.today) &&
+                (session == null || (session.status == SessionStatus.PLANNED && session.startedAt == null)),
+            onOpenExercise = { daySheet = null; onOpenExercise(it) },
+            onPickThisWeek = { templateId ->
+                daySheet = null
+                vm.setDayThisWeek(day.date, templateId) { ok ->
+                    notChanged(ok)
+                    if (ok) undo.show(if (templateId == null) "Descanso só nesta semana" else "Treino trocado só nesta semana", null)
+                }
+            },
+            onCustomize = {
+                daySheet = null
+                session?.let { vm.customizeDay(it) { id -> if (id != null) onOpenTemplate(id) else notChanged(false) } }
+            },
+            onReset = {
+                daySheet = null
+                vm.resetDay(day.date) { ok -> notChanged(ok); if (ok) undo.show("Dia voltou ao plano base", null) }
+            },
             isPastOrToday = !day.date.isAfter(state.today),
             canChangeAvailability = !day.date.isBefore(state.today),
             onOpen = { daySheet = null; session?.let { onOpenWorkout(it.id) } },
@@ -140,7 +172,7 @@ fun WeekScreen(
                 session?.let {
                     vm.mark(it, status) { revert ->
                         undo.show(message, revert)
-                        if (status == SessionStatus.MISSED && !day.date.isBefore(state.weekStart)) onOpenReplan()
+                        if (status == SessionStatus.MISSED && WeekLogic.replanCovers(day.date, state.today)) onOpenReplan()
                     }
                 }
             },
@@ -149,7 +181,7 @@ fun WeekScreen(
                 vm.setUnavailable(day.date, unavailable) { revert ->
                     undo.show(if (unavailable) "Dia marcado como indisponível" else "Dia disponível de novo", revert)
                     // Havia treino nesse dia: já propõe onde encaixar.
-                    if (unavailable && session?.status == SessionStatus.PLANNED) onOpenReplan()
+                    if (unavailable && session?.status == SessionStatus.PLANNED && WeekLogic.replanCovers(day.date, state.today)) onOpenReplan()
                 }
             },
             onDismiss = { daySheet = null },
@@ -199,6 +231,7 @@ private fun DayRow(day: DayView, isToday: Boolean, enabled: Boolean, onClick: ()
                     "${day.date.dayOfWeek.long()}, dia ${day.date.dayOfMonth}",
                     session?.name ?: "descanso",
                     session?.movedTo?.let { "foi para ${it.dayOfWeek.long().lowercase()}" },
+                    "só nesta semana".takeIf { day.special },
                     day.state.label()?.lowercase(),
                 ).joinToString(", ")
             }
@@ -218,10 +251,16 @@ private fun DayRow(day: DayView, isToday: Boolean, enabled: Boolean, onClick: ()
             if (session != null) {
                 val movedTo = session.movedTo
                 Text(
-                    if (movedTo != null) "Foi para ${movedTo.dayOfWeek.long().lowercase()}" else "${day.exerciseCount} exercícios",
+                    when {
+                        movedTo != null -> "Foi para ${movedTo.dayOfWeek.long().lowercase()}"
+                        day.special -> "${day.exerciseCount} exercícios · só nesta semana"
+                        else -> "${day.exerciseCount} exercícios"
+                    },
                     style = MaterialTheme.typography.bodySmall,
-                    color = Palette.TextMuted,
+                    color = if (day.special && movedTo == null) Palette.Lime else Palette.TextMuted,
                 )
+            } else if (day.special) {
+                Text("Só nesta semana", style = MaterialTheme.typography.bodySmall, color = Palette.Lime)
             }
         }
         day.state.label()?.let { text ->
@@ -313,6 +352,13 @@ private fun PlanBase(
 @Composable
 private fun DayActionsSheet(
     day: DayView,
+    items: List<TemplateItemRow>,
+    templates: List<TemplateSummary>,
+    canChangeThisWeek: Boolean,
+    onOpenExercise: (String) -> Unit,
+    onPickThisWeek: (Long?) -> Unit,
+    onCustomize: () -> Unit,
+    onReset: () -> Unit,
     isPastOrToday: Boolean,
     canChangeAvailability: Boolean,
     onOpen: () -> Unit,
@@ -326,9 +372,16 @@ private fun DayActionsSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Palette.Surface,
     ) {
-        Column(Modifier.padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        var picking by remember { mutableStateOf(false) }
+        Column(
+            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             SectionLabel("${day.date.dayOfWeek.long()} · ${day.date.dayOfMonth.twoDigits()}/${day.date.monthValue.twoDigits()}")
-            Text(session?.name ?: "Descanso", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 8.dp))
+            Text(session?.name ?: "Descanso", style = MaterialTheme.typography.headlineMedium)
+            if (day.special) Text("Mudado só nesta semana", style = MaterialTheme.typography.bodySmall, color = Palette.Lime)
+            if (items.isNotEmpty()) SessionExerciseList(items, onOpenExercise)
+            Spacer(Modifier.height(8.dp))
             if (session != null && isPastOrToday) {
                 SheetAction(R.drawable.ic_play, "Abrir treino", Palette.Lime, onOpen)
                 if (session.status != SessionStatus.DONE) {
@@ -354,6 +407,29 @@ private fun DayActionsSheet(
                         modifier = Modifier.padding(horizontal = 4.dp),
                     )
                 }
+            }
+            if (canChangeThisWeek) {
+                SectionLabel("Só nesta semana", Modifier.padding(top = 12.dp))
+                if (picking) {
+                    templates.forEach { summary ->
+                        PickRow(
+                            label = "${summary.template.code} · ${summary.template.name}",
+                            selected = session?.templateId == summary.template.id,
+                            onClick = { onPickThisWeek(summary.template.id) },
+                        )
+                    }
+                    if (session != null) PickRow("Descanso", selected = false, onClick = { onPickThisWeek(null) })
+                } else {
+                    if (session?.templateId != null) SheetAction(R.drawable.ic_edit, "Mudar exercícios deste dia", Palette.Lime, onCustomize)
+                    SheetAction(R.drawable.ic_swap, if (session == null) "Treinar neste dia" else "Trocar o treino deste dia", Palette.Text) { picking = true }
+                    if (day.special) SheetAction(R.drawable.ic_arrow_back, "Voltar ao plano base", Palette.TextMuted, onReset)
+                }
+                Text(
+                    "As outras semanas continuam seguindo o plano base.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Palette.TextMuted,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
             }
         }
     }

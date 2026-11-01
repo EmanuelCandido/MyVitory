@@ -1,0 +1,124 @@
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { Exercise } from '../lib/catalog'
+
+export function Stepper({ label, value, display, onChange, step = 1, min, max }: {
+  label: string
+  value: number
+  display?: string
+  onChange: (value: number) => void
+  step?: number
+  min: number
+  max: number
+}) {
+  return (
+    <div>
+      <span className="stepper-label">{label}</span>
+      <div className="stepper" role="group" aria-label={label}>
+        <button type="button" aria-label={`Diminuir ${label.toLowerCase()}`} disabled={value <= min} onClick={() => onChange(Math.max(min, value - step))}>
+          −
+        </button>
+        <output aria-live="polite">{display ?? value}</output>
+        <button type="button" aria-label={`Aumentar ${label.toLowerCase()}`} disabled={value >= max} onClick={() => onChange(Math.min(max, value + step))}>
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export function Thumb({ exercise, size = 52 }: { exercise: Exercise; size?: number }) {
+  const [failed, setFailed] = useState(false)
+  if (!exercise.gif || failed) {
+    return (
+      <div className="thumb placeholder" style={{ width: size, height: size }} aria-hidden>
+        {exercise.name.slice(0, 1)}
+      </div>
+    )
+  }
+  return <img className="thumb" src={exercise.gif} alt="" loading="lazy" width={size} height={size} style={{ width: size, height: size }} onError={() => setFailed(true)} />
+}
+
+export function Modal({ title, onClose, children, header, narrow }: { title: string; onClose: () => void; children: ReactNode; header?: ReactNode; narrow?: boolean }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null
+    ref.current?.querySelector<HTMLElement>('input, button, select, textarea')?.focus()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      previous?.focus()
+    }
+  }, [onClose])
+  return (
+    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={`modal${narrow ? ' narrow' : ''}`} role="dialog" aria-modal="true" aria-label={title} ref={ref}>
+        <div className="modal-head">
+          <div className="row between">
+            <h2 style={{ margin: 0, fontSize: 20 }}>{title}</h2>
+            <button className="btn ghost icon" type="button" aria-label="Fechar" onClick={onClose}>
+              ✕
+            </button>
+          </div>
+          {header}
+        </div>
+        <div className="modal-body">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+export function Confirm({ title, body, action, onConfirm, onClose }: { title: string; body: ReactNode; action: string; onConfirm: () => void; onClose: () => void }) {
+  return (
+    <Modal title={title} onClose={onClose} narrow>
+      <div className="stack">
+        <div className="muted">{body}</div>
+        <div className="row" style={{ justifyContent: 'flex-end' }}>
+          <button className="btn ghost" type="button" onClick={onClose}>
+            Cancelar
+          </button>
+          <button
+            className="btn danger"
+            type="button"
+            onClick={() => {
+              onConfirm()
+              onClose()
+            }}
+          >
+            {action}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
+/** Campo de texto que salva ao sair (ou com Enter), como o nome do treino no app. */
+export function CommitInput({ value, onCommit, multiline, ...rest }: {
+  value: string
+  onCommit: (value: string) => void
+  multiline?: boolean
+  placeholder?: string
+  className?: string
+  maxLength?: number
+  'aria-label'?: string
+}) {
+  const [text, setText] = useState(value)
+  useEffect(() => setText(value), [value])
+  const commit = () => text !== value && onCommit(text)
+  if (multiline) {
+    return <textarea {...rest} rows={1} value={text} onChange={(e) => setText(e.target.value)} onBlur={commit} />
+  }
+  return (
+    <input
+      {...rest}
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+        if (e.key === 'Escape') setText(value)
+      }}
+    />
+  )
+}

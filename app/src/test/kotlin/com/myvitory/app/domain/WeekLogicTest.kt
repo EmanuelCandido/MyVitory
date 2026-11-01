@@ -3,7 +3,9 @@ package com.myvitory.app.domain
 import java.time.DayOfWeek
 import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WeekLogicTest {
@@ -26,6 +28,14 @@ class WeekLogicTest {
         )
         val result = WeekLogic.sessionsToCreate(monday, plan, existingDates = setOf(monday))
         assertEquals(listOf(LocalDate.of(2026, 10, 28) to 3L), result)
+    }
+
+    @Test
+    fun `recálculo só cobre a semana de hoje`() {
+        assertTrue(WeekLogic.replanCovers(monday, thursday))
+        assertTrue(WeekLogic.replanCovers(LocalDate.of(2026, 11, 1), thursday)) // domingo da mesma semana
+        assertFalse(WeekLogic.replanCovers(monday.minusDays(1), monday)) // na segunda, o domingo é da semana passada
+        assertFalse(WeekLogic.replanCovers(monday.plusWeeks(1), thursday))
     }
 
     @Test

@@ -4,9 +4,13 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.myvitory.app.domain.WeightGoal
+import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -19,6 +23,9 @@ data class AppSettings(
     val yesterdayQuestion: Boolean = false,
     /** Iniciante: +24 h de descanso em cada músculo (recálculo e Recuperação). */
     val beginner: Boolean = false,
+    /** Avisa quando passa um mês sem pesar. */
+    val weightReminder: Boolean = false,
+    val weightGoal: WeightGoal? = null,
 ) {
     val extraRecoveryHours get() = if (beginner) BEGINNER_EXTRA_HOURS else 0
 
@@ -35,6 +42,11 @@ class SettingsRepository(private val context: Context) {
         val todayReminderMinutes = intPreferencesKey("today_reminder_minutes")
         val yesterdayQuestion = booleanPreferencesKey("yesterday_question")
         val beginner = booleanPreferencesKey("beginner")
+        val weightReminder = booleanPreferencesKey("weight_reminder")
+        val goalKg = doublePreferencesKey("weight_goal_kg")
+        val goalStartKg = doublePreferencesKey("weight_goal_start_kg")
+        /** Dia da época (LocalDate.toEpochDay); ausente = meta sem prazo. */
+        val goalBy = longPreferencesKey("weight_goal_by")
     }
 
     val settings: Flow<AppSettings> = context.settingsStore.data.map { p ->
@@ -44,6 +56,10 @@ class SettingsRepository(private val context: Context) {
             todayReminderMinutes = p[Keys.todayReminderMinutes] ?: defaults.todayReminderMinutes,
             yesterdayQuestion = p[Keys.yesterdayQuestion] ?: defaults.yesterdayQuestion,
             beginner = p[Keys.beginner] ?: defaults.beginner,
+            weightReminder = p[Keys.weightReminder] ?: defaults.weightReminder,
+            weightGoal = p[Keys.goalKg]?.let { target ->
+                WeightGoal(target, p[Keys.goalStartKg] ?: target, p[Keys.goalBy]?.let(LocalDate::ofEpochDay))
+            },
         )
     }
 
@@ -55,4 +71,19 @@ class SettingsRepository(private val context: Context) {
     suspend fun setYesterdayQuestion(on: Boolean) = context.settingsStore.edit { it[Keys.yesterdayQuestion] = on }
 
     suspend fun setBeginner(on: Boolean) = context.settingsStore.edit { it[Keys.beginner] = on }
+
+    suspend fun setWeightReminder(on: Boolean) = context.settingsStore.edit { it[Keys.weightReminder] = on }
+
+    /** Null apaga a meta. */
+    suspend fun setWeightGoal(goal: WeightGoal?) = context.settingsStore.edit {
+        if (goal == null) {
+            it.remove(Keys.goalKg)
+            it.remove(Keys.goalStartKg)
+            it.remove(Keys.goalBy)
+        } else {
+            it[Keys.goalKg] = goal.targetKg
+            it[Keys.goalStartKg] = goal.startKg
+            if (goal.by == null) it.remove(Keys.goalBy) else it[Keys.goalBy] = goal.by.toEpochDay()
+        }
+    }
 }

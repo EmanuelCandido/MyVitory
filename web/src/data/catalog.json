@@ -1,0 +1,1682 @@
+{
+  "muscles": [
+    {
+      "id": "CHEST",
+      "label": "Peito",
+      "recoveryHours": 72
+    },
+    {
+      "id": "BACK",
+      "label": "Costas",
+      "recoveryHours": 72
+    },
+    {
+      "id": "QUADS",
+      "label": "Quadríceps",
+      "recoveryHours": 72
+    },
+    {
+      "id": "HAMSTRINGS",
+      "label": "Posterior",
+      "recoveryHours": 72
+    },
+    {
+      "id": "GLUTES",
+      "label": "Glúteos",
+      "recoveryHours": 72
+    },
+    {
+      "id": "ADDUCTORS",
+      "label": "Adutores",
+      "recoveryHours": 48
+    },
+    {
+      "id": "SHOULDERS",
+      "label": "Ombros",
+      "recoveryHours": 48
+    },
+    {
+      "id": "BICEPS",
+      "label": "Bíceps",
+      "recoveryHours": 48
+    },
+    {
+      "id": "TRICEPS",
+      "label": "Tríceps",
+      "recoveryHours": 48
+    },
+    {
+      "id": "CALVES",
+      "label": "Panturrilha",
+      "recoveryHours": 24
+    },
+    {
+      "id": "ABS",
+      "label": "Abdômen",
+      "recoveryHours": 24
+    },
+    {
+      "id": "FOREARMS",
+      "label": "Antebraço",
+      "recoveryHours": 24
+    }
+  ],
+  "exercises": [
+    {
+      "id": "abdominal_infra",
+      "name": "Abdominal infra",
+      "equipment": "Peso corporal",
+      "primary": [
+        "ABS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/nCU1Ekp.gif",
+      "videoId": "ixJcUH8AlL8",
+      "tips": [
+        "Lombar colada no chão o tempo todo.",
+        "Leve os joelhos em direção ao peito tirando o quadril do chão.",
+        "Desça devagar, sem deixar as pernas caírem."
+      ]
+    },
+    {
+      "id": "abdominal_maquina",
+      "name": "Abdominal na máquina",
+      "equipment": "Máquina",
+      "primary": [
+        "ABS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/eXFXCY0.gif",
+      "videoId": "b_0HVe8xO1s",
+      "tips": [
+        "Ajuste o banco para as almofadas ficarem no peito.",
+        "Enrole o tronco para a frente contraindo o abdômen.",
+        "Volte devagar, sem deixar o peso bater."
+      ]
+    },
+    {
+      "id": "abdominal_polia",
+      "name": "Abdominal na polia",
+      "equipment": "Polia",
+      "primary": [
+        "ABS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/WW95auq.gif",
+      "videoId": "xBUocF1laq4",
+      "tips": [
+        "De joelhos, corda ao lado da cabeça.",
+        "Enrole o tronco levando o peito em direção ao quadril.",
+        "O quadril fica parado: quem trabalha é o abdômen."
+      ]
+    },
+    {
+      "id": "abdominal_obliquo",
+      "name": "Abdominal oblíquo",
+      "equipment": "Peso corporal",
+      "primary": [
+        "ABS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/cJgSTmh.gif",
+      "videoId": "Smr8ipkN5A0",
+      "tips": [
+        "Deitado, leve o cotovelo em direção ao joelho oposto.",
+        "Gire o tronco, não só o braço.",
+        "Alterne os lados com controle."
+      ]
+    },
+    {
+      "id": "abdominal_supra",
+      "name": "Abdominal supra",
+      "equipment": "Peso corporal",
+      "primary": [
+        "ABS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/TFqbd8t.gif",
+      "videoId": "pt0UAtsoNXk",
+      "tips": [
+        "Joelhos dobrados e pés no chão.",
+        "Tire só as escápulas do chão, sem puxar o pescoço.",
+        "Solte o ar subindo e desça devagar."
+      ]
+    },
+    {
+      "id": "aducao_polia",
+      "name": "Adução na polia",
+      "equipment": "Polia",
+      "primary": [
+        "ADDUCTORS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/hBGWILP.gif",
+      "videoId": "BS4jPGOqZ8M",
+      "tips": [
+        "Caneleira no tornozelo da perna mais perto da polia.",
+        "Traga a perna para a frente da outra, cruzando a linha do corpo.",
+        "Tronco parado e volta devagar."
+      ]
+    },
+    {
+      "id": "afundo",
+      "name": "Afundo com halteres",
+      "equipment": "Halteres",
+      "primary": [
+        "QUADS"
+      ],
+      "secondary": [
+        "GLUTES"
+      ],
+      "gif": "https://static.exercisedb.dev/media/RRWFUcw.gif",
+      "videoId": "-oIl0YJGf9c",
+      "tips": [
+        "Passo longo: os dois joelhos chegam a uns 90° embaixo.",
+        "Tronco ereto e joelho da frente alinhado com o pé.",
+        "Suba empurrando com o calcanhar da perna da frente."
+      ]
+    },
+    {
+      "id": "agachamento_bulgaro",
+      "name": "Agachamento búlgaro",
+      "equipment": "Halteres",
+      "primary": [
+        "QUADS"
+      ],
+      "secondary": [
+        "GLUTES"
+      ],
+      "gif": "https://static.exercisedb.dev/media/qx4fgX7.gif",
+      "videoId": "IGf9fR4Y7Iw",
+      "tips": [
+        "Pé de trás apoiado no banco, passo da frente longo.",
+        "Desça na vertical até o joelho de trás quase tocar o chão.",
+        "Tronco levemente inclinado para frente."
+      ]
+    },
+    {
+      "id": "agachamento_frontal",
+      "name": "Agachamento frontal",
+      "equipment": "Barra",
+      "primary": [
+        "QUADS"
+      ],
+      "secondary": [
+        "GLUTES"
+      ],
+      "gif": "https://static.exercisedb.dev/media/zG0zs85.gif",
+      "videoId": "syfDrU220FU",
+      "tips": [
+        "Barra apoiada na frente dos ombros, cotovelos altos.",
+        "Tronco bem ereto durante a descida.",
+        "Desça até onde mantiver os cotovelos altos e os calcanhares no chão."
+      ]
+    },
+    {
+      "id": "agachamento_goblet",
+      "name": "Agachamento goblet",
+      "equipment": "Halter",
+      "primary": [
+        "QUADS"
+      ],
+      "secondary": [
+        "GLUTES"
+      ],
+      "gif": "https://static.exercisedb.dev/media/yn8yg1r.gif",
+      "videoId": "ge1vdJRP0UA",
+      "tips": [
+        "Segure o halter junto ao peito, cotovelos para baixo.",
+        "Desça entre as pernas mantendo o tronco ereto.",
+        "Empurre o chão com o pé inteiro para subir."
+      ]
+    },
+    {
+      "id": "agachamento_hack",
+      "name": "Agachamento hack",
+      "equipment": "Máquina",
+      "primary": [
+        "QUADS"
+      ],
+      "secondary": [
+        "GLUTES"
+      ],
+      "gif": "https://static.exercisedb.dev/media/Qa55kX1.gif",
+      "videoId": "LeAgTrHfWuo",
+      "tips": [
+        "Costas inteiras apoiadas no encosto.",
+        "Desça até a coxa ficar paralela à plataforma.",
+        "Empurre pelo meio do pé, sem tirar o calcanhar."
+      ]
+    },
+    {
+      "id": "agachamento_livre",
+      "name": "Agachamento livre",
+      "equipment": "Barra",
+      "primary": [
+        "QUADS"
+      ],
+      "secondary": [
+        "GLUTES",
+        "HAMSTRINGS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/qXTaZnJ.gif",
+      "videoId": "s7i94Okznns",
+      "tips": [
+        "Pés na largura dos ombros, pontas levemente para fora.",
+        "Desça com o quadril para trás e joelhos na direção dos pés.",
+        "Coluna neutra e calcanhares no chão do começo ao fim."
+      ]
+    },
+    {
+      "id": "agachamento_smith",
+      "name": "Agachamento no Smith",
+      "equipment": "Smith",
+      "primary": [
+        "QUADS"
+      ],
+      "secondary": [
+        "GLUTES",
+        "HAMSTRINGS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/jFtipLl.gif",
+      "videoId": "uDBQtlCLQ0Y",
+      "tips": [
+        "Pés um pouco à frente da barra, na largura dos ombros.",
+        "Desça com o tronco firme até as coxas ficarem paralelas ao chão.",
+        "Joelhos na direção das pontas dos pés."
+      ]
+    },
+    {
+      "id": "barra_fixa",
+      "name": "Barra fixa",
+      "equipment": "Peso corporal",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [
+        "BICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/lBDjFxJ.gif",
+      "videoId": "AveJ5SXC7vI",
+      "tips": [
+        "Comece com os braços estendidos e ombros ativos.",
+        "Suba até o queixo passar a barra, sem chutar as pernas.",
+        "Desça controlando até estender de novo."
+      ]
+    },
+    {
+      "id": "barra_fixa_supinada",
+      "name": "Barra fixa supinada",
+      "equipment": "Peso corporal",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [
+        "BICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/T2mxWqc.gif",
+      "videoId": "IaZQoN-50gw",
+      "tips": [
+        "Mãos viradas para você, na largura dos ombros.",
+        "Suba até o queixo passar da barra, sem balançar.",
+        "Desça até estender quase todo o braço."
+      ]
+    },
+    {
+      "id": "cadeira_abdutora",
+      "name": "Cadeira abdutora",
+      "equipment": "Máquina",
+      "primary": [
+        "GLUTES"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/CHpahtl.gif",
+      "videoId": "GljAOyT5xLI",
+      "tips": [
+        "Costas apoiadas e quadril no fundo do banco.",
+        "Abra as pernas com controle e segure um instante.",
+        "Feche devagar, sem deixar o peso bater."
+      ]
+    },
+    {
+      "id": "cadeira_adutora",
+      "name": "Cadeira adutora",
+      "equipment": "Máquina",
+      "primary": [
+        "ADDUCTORS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/oHsrypV.gif",
+      "videoId": "Wf602gn_9zU",
+      "tips": [
+        "Costas apoiadas e pernas abertas até onde for confortável.",
+        "Feche as pernas com controle, sem bater as almofadas.",
+        "Abra devagar; não deixe o peso puxar."
+      ]
+    },
+    {
+      "id": "cadeira_extensora",
+      "name": "Cadeira extensora",
+      "equipment": "Máquina",
+      "primary": [
+        "QUADS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/my33uHU.gif",
+      "videoId": "el3oHblB5DM",
+      "tips": [
+        "Joelho alinhado com o eixo da máquina.",
+        "Estenda as pernas e segure um instante no topo.",
+        "Desça devagar, sem deixar o peso bater."
+      ]
+    },
+    {
+      "id": "cadeira_flexora",
+      "name": "Cadeira flexora",
+      "equipment": "Máquina",
+      "primary": [
+        "HAMSTRINGS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/Zg3XY7P.gif",
+      "videoId": "Zss6E3VU6X0",
+      "tips": [
+        "Joelho alinhado com o eixo da máquina e coxas presas.",
+        "Flexione até o fim sem tirar o quadril do banco.",
+        "Volte devagar até quase estender."
+      ]
+    },
+    {
+      "id": "crossover",
+      "name": "Crossover",
+      "equipment": "Polia",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [
+        "SHOULDERS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/Pr9Rhf4.gif",
+      "videoId": "jqTlJt3JXzQ",
+      "tips": [
+        "Um pé à frente e tronco levemente inclinado.",
+        "Feche os braços em arco, como num abraço, com cotovelos fixos.",
+        "Controle a volta; não deixe o peso puxar os braços para trás."
+      ]
+    },
+    {
+      "id": "crucifixo_halteres",
+      "name": "Crucifixo com halteres",
+      "equipment": "Halteres",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/yz9nUhF.gif",
+      "videoId": "uDMmccuPVPQ",
+      "tips": [
+        "Cotovelos levemente flexionados e fixos do começo ao fim.",
+        "Abra os braços em arco até sentir o peito alongar, sem passar da linha do ombro.",
+        "Feche como num abraço, sem bater os halteres."
+      ]
+    },
+    {
+      "id": "crucifixo_invertido",
+      "name": "Crucifixo invertido",
+      "equipment": "Máquina",
+      "primary": [
+        "SHOULDERS"
+      ],
+      "secondary": [
+        "BACK"
+      ],
+      "gif": "https://static.exercisedb.dev/media/myfUsKf.gif",
+      "videoId": "r1efeCcUW-8",
+      "tips": [
+        "Peito apoiado no encosto, braços à frente.",
+        "Abra os braços para trás juntando as escápulas.",
+        "Movimento curto e controlado, sem encolher os ombros."
+      ]
+    },
+    {
+      "id": "crucifixo_invertido_halteres",
+      "name": "Crucifixo invertido com halteres",
+      "equipment": "Halteres",
+      "primary": [
+        "SHOULDERS"
+      ],
+      "secondary": [
+        "BACK"
+      ],
+      "gif": "https://static.exercisedb.dev/media/EAs3xL9.gif",
+      "videoId": "r1efeCcUW-8",
+      "tips": [
+        "Tronco inclinado à frente, coluna neutra.",
+        "Abra os braços para os lados juntando as escápulas.",
+        "Carga leve e sem impulso."
+      ]
+    },
+    {
+      "id": "crucifixo_maquina",
+      "name": "Crucifixo na máquina",
+      "equipment": "Máquina",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/v3xmPAR.gif",
+      "videoId": "yGeuP023Hn0",
+      "tips": [
+        "Ajuste o banco para as mãos ficarem na altura do peito.",
+        "Cotovelos levemente flexionados o movimento todo.",
+        "Volte devagar até sentir o peito alongar, sem passar da linha do ombro."
+      ]
+    },
+    {
+      "id": "desenvolvimento_arnold",
+      "name": "Desenvolvimento Arnold",
+      "equipment": "Halteres",
+      "primary": [
+        "SHOULDERS"
+      ],
+      "secondary": [
+        "TRICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/Xy4jlWA.gif",
+      "videoId": "YghvTx_GI2c",
+      "tips": [
+        "Comece com os halteres na frente do rosto, palmas para você.",
+        "Gire as palmas para a frente enquanto empurra para cima.",
+        "Volte girando de novo, devagar."
+      ]
+    },
+    {
+      "id": "desenvolvimento_halteres",
+      "name": "Desenvolvimento com halteres",
+      "equipment": "Halteres",
+      "primary": [
+        "SHOULDERS"
+      ],
+      "secondary": [
+        "TRICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/znQUdHY.gif",
+      "videoId": "eufDL9MmF8A",
+      "tips": [
+        "Halteres na linha das orelhas no começo.",
+        "Empurre para cima sem arquear a lombar.",
+        "Desça até o cotovelo ficar um pouco abaixo do ombro."
+      ]
+    },
+    {
+      "id": "desenvolvimento_maquina",
+      "name": "Desenvolvimento na máquina",
+      "equipment": "Máquina",
+      "primary": [
+        "SHOULDERS"
+      ],
+      "secondary": [
+        "TRICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/67n3r98.gif",
+      "videoId": "uKw0TCpC8-o",
+      "tips": [
+        "Ajuste o banco para as pegadas ficarem na altura dos ombros.",
+        "Costas apoiadas e abdômen firme.",
+        "Empurre para cima sem travar os cotovelos."
+      ]
+    },
+    {
+      "id": "elevacao_pernas",
+      "name": "Elevação de pernas",
+      "equipment": "Peso corporal",
+      "primary": [
+        "ABS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/WhuFnR7.gif",
+      "videoId": "ixJcUH8AlL8",
+      "tips": [
+        "Lombar colada no chão ou no apoio.",
+        "Suba as pernas sem usar impulso.",
+        "Desça devagar sem encostar os pés no chão."
+      ]
+    },
+    {
+      "id": "elevacao_frontal",
+      "name": "Elevação frontal",
+      "equipment": "Halteres",
+      "primary": [
+        "SHOULDERS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/3eGE2JC.gif",
+      "videoId": "NxSuojHZa8k",
+      "tips": [
+        "Braços quase retos, sem balançar o tronco.",
+        "Suba até a altura dos ombros.",
+        "Desça devagar."
+      ]
+    },
+    {
+      "id": "elevacao_lateral",
+      "name": "Elevação lateral",
+      "equipment": "Halteres",
+      "primary": [
+        "SHOULDERS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/DsgkuIt.gif",
+      "videoId": "IwWvZ0rlNXs",
+      "tips": [
+        "Cotovelos levemente flexionados.",
+        "Suba os braços até a linha dos ombros, não acima.",
+        "Sem balanço: se precisar, diminua o peso."
+      ]
+    },
+    {
+      "id": "elevacao_lateral_polia",
+      "name": "Elevação lateral na polia",
+      "equipment": "Polia",
+      "primary": [
+        "SHOULDERS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/goJ6ezq.gif",
+      "videoId": "3vbYw9xklBc",
+      "tips": [
+        "Fique de lado para a polia, com o cabo passando na frente do corpo.",
+        "Suba o braço até a altura do ombro, cotovelo levemente flexionado.",
+        "A polia segura a tensão: desça devagar."
+      ]
+    },
+    {
+      "id": "elevacao_pelvica",
+      "name": "Elevação pélvica",
+      "equipment": "Barra",
+      "primary": [
+        "GLUTES"
+      ],
+      "secondary": [
+        "HAMSTRINGS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/qKBpF7I.gif",
+      "videoId": "ptK0azwOXwM",
+      "tips": [
+        "Parte de cima das costas apoiada no banco, barra sobre o quadril.",
+        "Suba até o tronco ficar alinhado com as coxas.",
+        "Contraia o glúteo no topo, sem arquear a lombar."
+      ]
+    },
+    {
+      "id": "encolhimento",
+      "name": "Encolhimento com halteres",
+      "equipment": "Halteres",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/NJzBsGJ.gif",
+      "videoId": "RhGjwIUe16E",
+      "tips": [
+        "Braços estendidos ao lado do corpo.",
+        "Suba os ombros em direção às orelhas, sem girar.",
+        "Segure um segundo em cima e desça devagar."
+      ]
+    },
+    {
+      "id": "flexao",
+      "name": "Flexão de braço",
+      "equipment": "Peso corporal",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [
+        "TRICEPS",
+        "SHOULDERS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/I4hDWkc.gif",
+      "videoId": "Azw6BZ8-wSM",
+      "tips": [
+        "Corpo reto da cabeça ao calcanhar: abdômen e glúteos contraídos.",
+        "Mãos um pouco mais abertas que os ombros.",
+        "Desça até o peito quase tocar o chão."
+      ]
+    },
+    {
+      "id": "gluteo_maquina",
+      "name": "Glúteo na máquina",
+      "equipment": "Máquina",
+      "primary": [
+        "GLUTES"
+      ],
+      "secondary": [
+        "HAMSTRINGS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/OPqShYN.gif",
+      "videoId": "cCKUK3huu8w",
+      "tips": [
+        "Ajuste o apoio para o quadril ficar estável.",
+        "Empurre para trás com o calcanhar contraindo o glúteo.",
+        "Não arqueie a lombar no fim do movimento."
+      ]
+    },
+    {
+      "id": "gluteo_polia",
+      "name": "Glúteo na polia",
+      "equipment": "Polia",
+      "primary": [
+        "GLUTES"
+      ],
+      "secondary": [
+        "HAMSTRINGS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/Kpajagk.gif",
+      "videoId": "XYCCcD0MxN8",
+      "tips": [
+        "Caneleira presa no tornozelo, segure firme no aparelho.",
+        "Leve a perna para trás contraindo o glúteo, sem arquear a lombar.",
+        "Volte devagar sem apoiar o pé."
+      ]
+    },
+    {
+      "id": "bom_dia",
+      "name": "Good morning",
+      "equipment": "Barra",
+      "primary": [
+        "HAMSTRINGS"
+      ],
+      "secondary": [
+        "GLUTES",
+        "BACK"
+      ],
+      "gif": "https://static.exercisedb.dev/media/XlZ4lAC.gif",
+      "videoId": "gNJPsY2v6xA",
+      "tips": [
+        "Barra nas costas como no agachamento, joelhos levemente flexionados.",
+        "Incline o tronco levando o quadril para trás, coluna neutra.",
+        "Use carga leve: é mais técnica que força."
+      ]
+    },
+    {
+      "id": "hiperextensao",
+      "name": "Hiperextensão lombar",
+      "equipment": "Peso corporal",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [
+        "GLUTES",
+        "HAMSTRINGS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/zhMwOwE.gif",
+      "videoId": "0ssEGdsjGWw",
+      "tips": [
+        "Quadril na borda do apoio, braços cruzados no peito.",
+        "Suba até o corpo ficar em linha reta, sem passar disso.",
+        "Desça devagar mantendo a coluna neutra."
+      ]
+    },
+    {
+      "id": "leg_press_45",
+      "name": "Leg press 45°",
+      "equipment": "Máquina",
+      "primary": [
+        "QUADS"
+      ],
+      "secondary": [
+        "GLUTES"
+      ],
+      "gif": "https://static.exercisedb.dev/media/10Z2DXU.gif",
+      "videoId": "waAxlYvtCcI",
+      "tips": [
+        "Pés na largura do quadril, no meio da plataforma.",
+        "Desça até o joelho chegar perto de 90°, sem tirar o quadril do encosto.",
+        "Não trave o joelho no topo."
+      ]
+    },
+    {
+      "id": "levantamento_terra",
+      "name": "Levantamento terra",
+      "equipment": "Barra",
+      "primary": [
+        "HAMSTRINGS"
+      ],
+      "secondary": [
+        "GLUTES",
+        "BACK"
+      ],
+      "gif": "https://static.exercisedb.dev/media/ila4NZS.gif",
+      "videoId": "50AkPBZwACQ",
+      "tips": [
+        "Barra rente à canela, coluna neutra antes de puxar.",
+        "Empurre o chão com as pernas e estenda o quadril junto.",
+        "Barra perto do corpo do começo ao fim."
+      ]
+    },
+    {
+      "id": "terra_sumo",
+      "name": "Levantamento terra sumô",
+      "equipment": "Barra",
+      "primary": [
+        "GLUTES"
+      ],
+      "secondary": [
+        "HAMSTRINGS",
+        "QUADS",
+        "ADDUCTORS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/KgI0tqW.gif",
+      "videoId": "Gevmfb8rXsI",
+      "tips": [
+        "Pés bem afastados e pontas para fora, mãos por dentro das pernas.",
+        "Peito aberto e coluna neutra antes de puxar.",
+        "Empurre o chão para os lados e suba estendendo quadril e joelhos juntos."
+      ]
+    },
+    {
+      "id": "mergulho_paralelas",
+      "name": "Mergulho nas paralelas",
+      "equipment": "Peso corporal",
+      "primary": [
+        "TRICEPS"
+      ],
+      "secondary": [
+        "CHEST",
+        "SHOULDERS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/X6C6i5Y.gif",
+      "videoId": "OPyI6B68tHw",
+      "tips": [
+        "Ombros longe das orelhas durante toda a série.",
+        "Desça até o cotovelo chegar perto de 90°.",
+        "Tronco mais reto foca no tríceps; inclinado, no peito."
+      ]
+    },
+    {
+      "id": "mergulho_banco",
+      "name": "Mergulho no banco",
+      "equipment": "Peso corporal",
+      "primary": [
+        "TRICEPS"
+      ],
+      "secondary": [
+        "CHEST",
+        "SHOULDERS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/RrLske5.gif",
+      "videoId": "8eFABDEBH-Y",
+      "tips": [
+        "Mãos no banco na largura do quadril, dedos para a frente.",
+        "Desça até os cotovelos ficarem em 90°, com as costas perto do banco.",
+        "Pés mais longe deixam mais difícil; comece com os joelhos dobrados."
+      ]
+    },
+    {
+      "id": "mesa_flexora",
+      "name": "Mesa flexora",
+      "equipment": "Máquina",
+      "primary": [
+        "HAMSTRINGS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/17lJ1kr.gif",
+      "videoId": "2-ULaRrQa7c",
+      "tips": [
+        "Joelho alinhado com o eixo da máquina, quadril colado no banco.",
+        "Flexione até o rolo chegar perto do glúteo.",
+        "Volte devagar até quase estender."
+      ]
+    },
+    {
+      "id": "panturrilha_em_pe",
+      "name": "Panturrilha em pé",
+      "equipment": "Máquina",
+      "primary": [
+        "CALVES"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/ykUOVze.gif",
+      "videoId": "Znkj_cC8a5c",
+      "tips": [
+        "Ponta dos pés na borda, calcanhares livres.",
+        "Desça até alongar bem a panturrilha.",
+        "Suba o mais alto possível e segure um segundo."
+      ]
+    },
+    {
+      "id": "panturrilha_leg_press",
+      "name": "Panturrilha no leg press",
+      "equipment": "Máquina",
+      "primary": [
+        "CALVES"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/ykHcWme.gif",
+      "videoId": "Ua7jx6wKyMw",
+      "tips": [
+        "Só a ponta dos pés na borda de baixo da plataforma.",
+        "Joelhos estendidos, mas sem travar.",
+        "Empurre com a ponta dos pés e volte devagar."
+      ]
+    },
+    {
+      "id": "panturrilha_sentado",
+      "name": "Panturrilha sentado",
+      "equipment": "Máquina",
+      "primary": [
+        "CALVES"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/bOOdeyc.gif",
+      "videoId": "1NBoneuGtQo",
+      "tips": [
+        "Apoio sobre a coxa, perto do joelho.",
+        "Desça o calcanhar até alongar bem.",
+        "Suba até a ponta do pé e segure um segundo."
+      ]
+    },
+    {
+      "id": "prancha",
+      "name": "Prancha",
+      "equipment": "Peso corporal",
+      "primary": [
+        "ABS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/VBAWRPG.gif",
+      "videoId": "qNRqGqESAWU",
+      "tips": [
+        "Cotovelos embaixo dos ombros, corpo reto da cabeça ao calcanhar.",
+        "Contraia abdômen e glúteos; não deixe o quadril cair.",
+        "Respire normalmente e conte o tempo."
+      ]
+    },
+    {
+      "id": "pulldown_braco_estendido",
+      "name": "Pulldown com braços estendidos",
+      "equipment": "Polia",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/x69MAlq.gif",
+      "videoId": "FepRH_MBX8E",
+      "tips": [
+        "Braços quase retos, cotovelos levemente flexionados.",
+        "Puxe a barra em arco até as coxas usando as costas.",
+        "Não incline o tronco para ajudar."
+      ]
+    },
+    {
+      "id": "pullover",
+      "name": "Pullover com halter",
+      "equipment": "Halter",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [
+        "BACK"
+      ],
+      "gif": "https://static.exercisedb.dev/media/9XjtHvS.gif",
+      "videoId": "-KaMXMMIVrU",
+      "tips": [
+        "Apoie a parte de cima das costas no banco, quadril um pouco abaixo.",
+        "Leve o halter para trás da cabeça com os cotovelos levemente flexionados.",
+        "Volte até acima do peito sem arquear a lombar."
+      ]
+    },
+    {
+      "id": "puxada_triangulo",
+      "name": "Puxada com triângulo",
+      "equipment": "Polia",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [
+        "BICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/4c9BhzB.gif",
+      "videoId": "Att1gKVtDUM",
+      "tips": [
+        "Tronco um pouco inclinado para trás, peito aberto.",
+        "Puxe o triângulo até a parte de cima do peito levando os cotovelos para baixo.",
+        "Suba devagar até alongar as costas."
+      ]
+    },
+    {
+      "id": "puxada_frente",
+      "name": "Puxada frente",
+      "equipment": "Polia",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [
+        "BICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/LEprlgG.gif",
+      "videoId": "mPmfwbc_svw",
+      "tips": [
+        "Pegada um pouco mais aberta que os ombros.",
+        "Puxe levando os cotovelos para baixo e para trás, até o queixo.",
+        "Não balance o tronco para ajudar."
+      ]
+    },
+    {
+      "id": "remada_alta",
+      "name": "Remada alta",
+      "equipment": "Barra",
+      "primary": [
+        "SHOULDERS"
+      ],
+      "secondary": [
+        "BACK"
+      ],
+      "gif": "https://static.exercisedb.dev/media/83HoW9X.gif",
+      "videoId": "tm0IywBhIYM",
+      "tips": [
+        "Pegada na largura dos ombros ou um pouco menos.",
+        "Puxe a barra até a altura do peito, cotovelos acima das mãos.",
+        "Se sentir o ombro pinçar, suba menos."
+      ]
+    },
+    {
+      "id": "remada_baixa",
+      "name": "Remada baixa no cabo",
+      "equipment": "Polia",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [
+        "BICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/fUBheHs.gif",
+      "videoId": "f8AVh4VBbos",
+      "tips": [
+        "Peito aberto e coluna reta, sem jogar o tronco para trás.",
+        "Puxe o cabo até a barriga juntando as escápulas.",
+        "Estenda os braços devagar na volta."
+      ]
+    },
+    {
+      "id": "remada_cavalinho",
+      "name": "Remada cavalinho",
+      "equipment": "Máquina",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [
+        "BICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/aaXr7ld.gif",
+      "videoId": "b-n8m51UIxc",
+      "tips": [
+        "Peito apoiado (ou tronco firme) e coluna neutra.",
+        "Puxe os pegadores até a barriga juntando as escápulas.",
+        "Desça com controle, sem arredondar as costas."
+      ]
+    },
+    {
+      "id": "remada_curvada",
+      "name": "Remada curvada com barra",
+      "equipment": "Barra",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [
+        "BICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/eZyBC3j.gif",
+      "videoId": "TfxJMertfsw",
+      "tips": [
+        "Tronco inclinado perto de 45°, coluna neutra.",
+        "Puxe a barra em direção ao umbigo, cotovelos perto do corpo.",
+        "Joelhos levemente flexionados e firmes."
+      ]
+    },
+    {
+      "id": "remada_maquina",
+      "name": "Remada na máquina",
+      "equipment": "Máquina",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [
+        "BICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/7I6LNUG.gif",
+      "videoId": "hfhEieRoWfo",
+      "tips": [
+        "Ajuste o banco para as pegadas ficarem na linha do peito.",
+        "Puxe levando os cotovelos para trás e juntando as escápulas.",
+        "Não jogue o tronco para trás para ajudar."
+      ]
+    },
+    {
+      "id": "remada_unilateral",
+      "name": "Remada unilateral",
+      "equipment": "Halter",
+      "primary": [
+        "BACK"
+      ],
+      "secondary": [
+        "BICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/BJ0Hz5L.gif",
+      "videoId": "HcyPuf31RmE",
+      "tips": [
+        "Mão e joelho apoiados no banco, costas paralelas ao chão.",
+        "Puxe o halter em direção ao quadril, não ao ombro.",
+        "Não gire o tronco para subir mais peso."
+      ]
+    },
+    {
+      "id": "rosca_scott",
+      "name": "Rosca Scott",
+      "equipment": "Barra",
+      "primary": [
+        "BICEPS"
+      ],
+      "secondary": [
+        "FOREARMS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/qOgPVf6.gif",
+      "videoId": "FSif6nOClIE",
+      "tips": [
+        "Axilas encostadas no topo do banco.",
+        "Desça até quase estender o braço, sem soltar o peso.",
+        "Suba sem tirar os cotovelos do apoio."
+      ]
+    },
+    {
+      "id": "rosca_alternada",
+      "name": "Rosca alternada",
+      "equipment": "Halteres",
+      "primary": [
+        "BICEPS"
+      ],
+      "secondary": [
+        "FOREARMS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/BU15nH4.gif",
+      "videoId": "AuBN9_8Iihc",
+      "tips": [
+        "Gire o punho para cima enquanto sobe.",
+        "Um braço por vez, sem mover o cotovelo.",
+        "Desça devagar antes de começar o outro lado."
+      ]
+    },
+    {
+      "id": "rosca_barra_w",
+      "name": "Rosca com barra W",
+      "equipment": "Barra",
+      "primary": [
+        "BICEPS"
+      ],
+      "secondary": [
+        "FOREARMS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/6TG6x2w.gif",
+      "videoId": "hemxXmD6l4w",
+      "tips": [
+        "Pegue nas curvas da barra W: alivia os punhos.",
+        "Cotovelos fixos ao lado do corpo.",
+        "Suba sem balançar o tronco e desça devagar."
+      ]
+    },
+    {
+      "id": "rosca_concentrada",
+      "name": "Rosca concentrada",
+      "equipment": "Halter",
+      "primary": [
+        "BICEPS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/gvsWLQw.gif",
+      "videoId": "EEpvOQAAtRo",
+      "tips": [
+        "Sentado, cotovelo apoiado na parte de dentro da coxa.",
+        "Suba o halter até o ombro sem mexer o braço.",
+        "Desça devagar até quase estender."
+      ]
+    },
+    {
+      "id": "rosca_punho",
+      "name": "Rosca de punho",
+      "equipment": "Barra",
+      "primary": [
+        "FOREARMS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/6kSxYnw.gif",
+      "videoId": "1ZmXT_fpLOI",
+      "tips": [
+        "Antebraços apoiados no banco ou nas coxas, punhos para fora.",
+        "Deixe a barra rolar até os dedos e feche a mão subindo o punho.",
+        "Use carga leve e faça a amplitude completa."
+      ]
+    },
+    {
+      "id": "rosca_punho_inversa",
+      "name": "Rosca de punho inversa",
+      "equipment": "Barra",
+      "primary": [
+        "FOREARMS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/LsZkfU6.gif",
+      "videoId": "27EJ1IP4heE",
+      "tips": [
+        "Antebraços apoiados, palmas viradas para baixo.",
+        "Suba só o punho, sem mexer o cotovelo.",
+        "Carga leve e descida lenta."
+      ]
+    },
+    {
+      "id": "rosca_direta",
+      "name": "Rosca direta",
+      "equipment": "Barra",
+      "primary": [
+        "BICEPS"
+      ],
+      "secondary": [
+        "FOREARMS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/25GPyDY.gif",
+      "videoId": "hemxXmD6l4w",
+      "tips": [
+        "Cotovelos parados ao lado do corpo.",
+        "Suba sem balançar o tronco.",
+        "Desça até quase estender o braço."
+      ]
+    },
+    {
+      "id": "rosca_martelo",
+      "name": "Rosca martelo",
+      "equipment": "Halteres",
+      "primary": [
+        "BICEPS"
+      ],
+      "secondary": [
+        "FOREARMS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/2NpxjC1.gif",
+      "videoId": "OnNmaG_tZM4",
+      "tips": [
+        "Pegada neutra, palmas viradas uma para a outra.",
+        "Cotovelos fixos ao lado do corpo.",
+        "Suba até o antebraço passar da linha do chão."
+      ]
+    },
+    {
+      "id": "rosca_polia",
+      "name": "Rosca na polia",
+      "equipment": "Polia",
+      "primary": [
+        "BICEPS"
+      ],
+      "secondary": [
+        "FOREARMS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/G08RZcQ.gif",
+      "videoId": "X12n32mNBp8",
+      "tips": [
+        "Fique perto da polia, cotovelos colados ao corpo.",
+        "Suba a barra até a linha do peito.",
+        "A polia mantém a tensão na descida: controle a volta."
+      ]
+    },
+    {
+      "id": "stiff",
+      "name": "Stiff com barra",
+      "equipment": "Barra",
+      "primary": [
+        "HAMSTRINGS"
+      ],
+      "secondary": [
+        "GLUTES"
+      ],
+      "gif": "https://static.exercisedb.dev/media/wQ2c4XD.gif",
+      "videoId": "x5gNKXFuloU",
+      "tips": [
+        "Joelhos levemente flexionados e parados.",
+        "Desça a barra rente às pernas levando o quadril para trás.",
+        "Pare quando sentir o posterior alongar, com a coluna ainda reta."
+      ]
+    },
+    {
+      "id": "stiff_halteres",
+      "name": "Stiff com halteres",
+      "equipment": "Halteres",
+      "primary": [
+        "HAMSTRINGS"
+      ],
+      "secondary": [
+        "GLUTES"
+      ],
+      "gif": "https://static.exercisedb.dev/media/5eLRITT.gif",
+      "videoId": "cETLf4xXYCQ",
+      "tips": [
+        "Joelhos levemente flexionados e fixos.",
+        "Leve o quadril para trás descendo os halteres rente às pernas.",
+        "Desça até sentir o posterior alongar, sem arredondar as costas."
+      ]
+    },
+    {
+      "id": "subida_banco",
+      "name": "Subida no banco",
+      "equipment": "Halteres",
+      "primary": [
+        "QUADS"
+      ],
+      "secondary": [
+        "GLUTES"
+      ],
+      "gif": "https://static.exercisedb.dev/media/aXtJhlg.gif",
+      "videoId": "ho6RHQuqftY",
+      "tips": [
+        "Banco na altura do joelho, pé inteiro apoiado em cima.",
+        "Suba com a força da perna de cima, sem impulsionar com a de baixo.",
+        "Desça devagar e controlado."
+      ]
+    },
+    {
+      "id": "supino_declinado",
+      "name": "Supino declinado com barra",
+      "equipment": "Barra",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [
+        "TRICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/GrO65fd.gif",
+      "videoId": "J2g6qPBJfqo",
+      "tips": [
+        "Prenda bem as pernas antes de tirar a barra.",
+        "Desça até a parte de baixo do peito, com controle.",
+        "Peça ajuda para tirar e devolver a barra."
+      ]
+    },
+    {
+      "id": "supino_fechado",
+      "name": "Supino fechado",
+      "equipment": "Barra",
+      "primary": [
+        "TRICEPS"
+      ],
+      "secondary": [
+        "CHEST"
+      ],
+      "gif": "https://static.exercisedb.dev/media/J6Dx1Mu.gif",
+      "videoId": "ZiemT4r4DcU",
+      "tips": [
+        "Mãos na largura dos ombros, não mais juntas que isso.",
+        "Cotovelos perto do tronco durante a descida.",
+        "Desça até a parte de baixo do peito e empurre com o tríceps."
+      ]
+    },
+    {
+      "id": "supino_inclinado_barra",
+      "name": "Supino inclinado com barra",
+      "equipment": "Barra",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [
+        "SHOULDERS",
+        "TRICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/3TZduzM.gif",
+      "videoId": "WP1VLAt8hbM",
+      "tips": [
+        "Banco entre 30° e 45°.",
+        "Desça a barra até a parte de cima do peito, perto da clavícula.",
+        "Mantenha o quadril no banco e as escápulas encaixadas."
+      ]
+    },
+    {
+      "id": "supino_inclinado_halteres",
+      "name": "Supino inclinado com halteres",
+      "equipment": "Halteres",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [
+        "SHOULDERS",
+        "TRICEPS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/ns0SIbU.gif",
+      "videoId": "rCPwrZkrVVQ",
+      "tips": [
+        "Banco entre 30° e 45°.",
+        "Desça os halteres ao lado do peito, controlando a descida.",
+        "Suba aproximando os halteres sem bater um no outro."
+      ]
+    },
+    {
+      "id": "supino_maquina",
+      "name": "Supino na máquina",
+      "equipment": "Máquina",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [
+        "TRICEPS",
+        "SHOULDERS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/DOoWcnA.gif",
+      "videoId": "M4Iagnqx4cg",
+      "tips": [
+        "Ajuste o banco para as pegadas ficarem na linha do meio do peito.",
+        "Costas apoiadas e escápulas juntas o tempo todo.",
+        "Empurre sem travar os cotovelos no final."
+      ]
+    },
+    {
+      "id": "supino_reto",
+      "name": "Supino reto com barra",
+      "equipment": "Barra",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [
+        "TRICEPS",
+        "SHOULDERS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/EIeI8Vf.gif",
+      "videoId": "pCPyqW60Wuk",
+      "tips": [
+        "Escápulas juntas e para baixo, pés firmes no chão.",
+        "Desça a barra até a linha do peito com os cotovelos a uns 45° do tronco.",
+        "Empurre sem tirar o quadril do banco."
+      ]
+    },
+    {
+      "id": "supino_reto_halteres",
+      "name": "Supino reto com halteres",
+      "equipment": "Halteres",
+      "primary": [
+        "CHEST"
+      ],
+      "secondary": [
+        "TRICEPS",
+        "SHOULDERS"
+      ],
+      "gif": "https://static.exercisedb.dev/media/SpYC0Kp.gif",
+      "videoId": "Cjh2fIMQHk0",
+      "tips": [
+        "Escápulas juntas e pés firmes no chão.",
+        "Desça os halteres ao lado do peito, cotovelos a uns 45° do tronco.",
+        "Suba aproximando os halteres sem bater um no outro."
+      ]
+    },
+    {
+      "id": "triceps_coice",
+      "name": "Tríceps coice",
+      "equipment": "Halter",
+      "primary": [
+        "TRICEPS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/W6PxUkg.gif",
+      "videoId": "PyKv23F-fVM",
+      "tips": [
+        "Tronco inclinado à frente e braço colado ao corpo, paralelo ao chão.",
+        "Estenda o cotovelo até o braço ficar reto.",
+        "Volte devagar sem balançar o ombro."
+      ]
+    },
+    {
+      "id": "triceps_frances",
+      "name": "Tríceps francês",
+      "equipment": "Halter",
+      "primary": [
+        "TRICEPS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/PdmaD0N.gif",
+      "videoId": "PlQOxSm_ZWI",
+      "tips": [
+        "Cotovelos apontando para cima, perto da cabeça.",
+        "Desça o halter atrás da cabeça com controle.",
+        "Não arqueie a lombar: abdômen firme."
+      ]
+    },
+    {
+      "id": "triceps_corda",
+      "name": "Tríceps na corda",
+      "equipment": "Polia",
+      "primary": [
+        "TRICEPS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/dU605di.gif",
+      "videoId": "re-ILvqD1RE",
+      "tips": [
+        "Cotovelos colados ao corpo; só o antebraço se move.",
+        "No fim, abra a corda para os lados e estenda bem os braços.",
+        "Suba devagar até os antebraços passarem da linha do cotovelo."
+      ]
+    },
+    {
+      "id": "triceps_polia",
+      "name": "Tríceps na polia",
+      "equipment": "Polia",
+      "primary": [
+        "TRICEPS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/3ZflifB.gif",
+      "videoId": "re-ILvqD1RE",
+      "tips": [
+        "Cotovelos colados ao corpo e parados.",
+        "Estenda até travar o braço, sem jogar o tronco.",
+        "Suba só até o antebraço passar da linha do chão."
+      ]
+    },
+    {
+      "id": "triceps_testa",
+      "name": "Tríceps testa",
+      "equipment": "Barra",
+      "primary": [
+        "TRICEPS"
+      ],
+      "secondary": [],
+      "gif": "https://static.exercisedb.dev/media/h8LFzo9.gif",
+      "videoId": "VakpIeaaeXA",
+      "tips": [
+        "Cotovelos apontados para o teto, sem abrir para os lados.",
+        "Desça a barra até perto da testa, devagar.",
+        "Estenda os braços sem mexer os ombros."
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "code": "A",
+      "name": "Peito + Tríceps",
+      "day": 1,
+      "items": [
+        {
+          "exerciseId": "supino_reto",
+          "sets": 4,
+          "reps": 8,
+          "restSec": 120
+        },
+        {
+          "exerciseId": "supino_inclinado_halteres",
+          "sets": 3,
+          "reps": 10,
+          "restSec": 90
+        },
+        {
+          "exerciseId": "crossover",
+          "sets": 3,
+          "reps": 12,
+          "restSec": 60
+        },
+        {
+          "exerciseId": "triceps_polia",
+          "sets": 3,
+          "reps": 12,
+          "restSec": 60
+        },
+        {
+          "exerciseId": "triceps_frances",
+          "sets": 3,
+          "reps": 10,
+          "restSec": 60
+        }
+      ]
+    },
+    {
+      "code": "B",
+      "name": "Costas + Bíceps",
+      "day": 2,
+      "items": [
+        {
+          "exerciseId": "puxada_frente",
+          "sets": 4,
+          "reps": 10,
+          "restSec": 90
+        },
+        {
+          "exerciseId": "remada_curvada",
+          "sets": 4,
+          "reps": 8,
+          "restSec": 120
+        },
+        {
+          "exerciseId": "remada_baixa",
+          "sets": 3,
+          "reps": 10,
+          "restSec": 90
+        },
+        {
+          "exerciseId": "rosca_direta",
+          "sets": 3,
+          "reps": 10,
+          "restSec": 60
+        },
+        {
+          "exerciseId": "rosca_martelo",
+          "sets": 3,
+          "reps": 12,
+          "restSec": 60
+        }
+      ]
+    },
+    {
+      "code": "C",
+      "name": "Pernas",
+      "day": 3,
+      "items": [
+        {
+          "exerciseId": "agachamento_livre",
+          "sets": 4,
+          "reps": 8,
+          "restSec": 150
+        },
+        {
+          "exerciseId": "leg_press_45",
+          "sets": 3,
+          "reps": 10,
+          "restSec": 120
+        },
+        {
+          "exerciseId": "cadeira_extensora",
+          "sets": 3,
+          "reps": 12,
+          "restSec": 60
+        },
+        {
+          "exerciseId": "mesa_flexora",
+          "sets": 3,
+          "reps": 12,
+          "restSec": 60
+        },
+        {
+          "exerciseId": "panturrilha_em_pe",
+          "sets": 4,
+          "reps": 15,
+          "restSec": 45
+        }
+      ]
+    },
+    {
+      "code": "D",
+      "name": "Ombros + Abdômen",
+      "day": 4,
+      "items": [
+        {
+          "exerciseId": "desenvolvimento_halteres",
+          "sets": 4,
+          "reps": 10,
+          "restSec": 90
+        },
+        {
+          "exerciseId": "elevacao_lateral",
+          "sets": 4,
+          "reps": 12,
+          "restSec": 60
+        },
+        {
+          "exerciseId": "crucifixo_invertido",
+          "sets": 3,
+          "reps": 12,
+          "restSec": 60
+        },
+        {
+          "exerciseId": "abdominal_polia",
+          "sets": 3,
+          "reps": 15,
+          "restSec": 45
+        },
+        {
+          "exerciseId": "elevacao_pernas",
+          "sets": 3,
+          "reps": 12,
+          "restSec": 45
+        }
+      ]
+    },
+    {
+      "code": "E",
+      "name": "Posterior + Glúteos",
+      "day": 5,
+      "items": [
+        {
+          "exerciseId": "stiff",
+          "sets": 4,
+          "reps": 10,
+          "restSec": 120
+        },
+        {
+          "exerciseId": "elevacao_pelvica",
+          "sets": 4,
+          "reps": 10,
+          "restSec": 90
+        },
+        {
+          "exerciseId": "mesa_flexora",
+          "sets": 3,
+          "reps": 12,
+          "restSec": 60
+        },
+        {
+          "exerciseId": "agachamento_bulgaro",
+          "sets": 3,
+          "reps": 10,
+          "restSec": 90
+        },
+        {
+          "exerciseId": "cadeira_abdutora",
+          "sets": 3,
+          "reps": 15,
+          "restSec": 60
+        }
+      ]
+    }
+  ]
+}

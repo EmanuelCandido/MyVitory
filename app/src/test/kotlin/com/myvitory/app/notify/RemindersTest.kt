@@ -37,7 +37,7 @@ class RemindersTest {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), MyVitoryDatabase::class.java).build()
         training = TrainingRepository(db, today = { today })
         decider = ReminderDecider(training)
-        training.seedIfEmpty()
+        TrainingRepository(db, today = { monday }).seedIfEmpty()
     }
 
     @After

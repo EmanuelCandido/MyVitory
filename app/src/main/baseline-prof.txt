@@ -1,0 +1,4 @@
+# Perfil de compilação antecipada: o código do app sai compilado já na instalação (sem esperar o JIT).
+# O Compose, o Room e o Coil trazem os próprios perfis; este cobre as telas e os repositórios do MyVitory.
+HSPLcom/myvitory/app/**->**(**)**
+Lcom/myvitory/app/**;

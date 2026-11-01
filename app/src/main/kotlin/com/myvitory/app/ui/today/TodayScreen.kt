@@ -1,5 +1,6 @@
 package com.myvitory.app.ui.today
 
+import androidx.annotation.DrawableRes
 import androidx.compose.ui.semantics.heading
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.BorderStroke
@@ -52,6 +53,7 @@ import com.myvitory.app.ui.components.AppIcon
 import com.myvitory.app.ui.components.MarkSessionSheet
 import com.myvitory.app.ui.components.PrimaryButton
 import com.myvitory.app.ui.components.SecondaryButton
+import com.myvitory.app.ui.components.SessionExerciseList
 import com.myvitory.app.ui.components.SectionLabel
 import com.myvitory.app.ui.components.StatusMark
 import com.myvitory.app.ui.components.headerLabel
@@ -61,6 +63,7 @@ import com.myvitory.app.ui.components.long
 import com.myvitory.app.ui.components.short
 import com.myvitory.app.ui.components.twoDigits
 import com.myvitory.app.ui.theme.Palette
+import com.myvitory.app.ui.update.UpdateCard
 import java.time.LocalDate
 
 @Composable
@@ -70,8 +73,10 @@ fun TodayScreen(
     onOpenReplan: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenWeek: () -> Unit,
+    onOpenExercise: (String) -> Unit,
+    onOpenWeight: () -> Unit,
 ) {
-    val vm = appViewModel { TodayViewModel(it.training, it.coach) }
+    val vm = appViewModel { TodayViewModel(it.training, it.coach, it.weights) }
     val state by vm.state.collectAsStateWithLifecycle()
     val undo = LocalUndo.current
     var marking by remember { mutableStateOf<DayView?>(null) }
@@ -117,6 +122,8 @@ fun TodayScreen(
 
         WeekStrip(state.week, state.today, onOpenWeek, Modifier.padding(start = 12.dp, end = 12.dp, top = 16.dp))
 
+        UpdateCard(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp))
+
         state.unmarked?.let { day ->
             Banner(
                 text = "${day.date.dayOfWeek.long()} (${day.session?.name}) ficou sem registro.",
@@ -135,6 +142,17 @@ fun TodayScreen(
             )
         }
 
+        // Pesagem do mês: só aparece sem aviso de treino na frente, que pede decisão antes.
+        if (!state.loading && state.weightDue && state.unmarked == null && state.pendingMissed.isEmpty()) {
+            Banner(
+                text = state.daysSinceWeight?.let { "Faz $it dias desde a última pesagem." } ?: "Registre seu peso para acompanhar a evolução.",
+                action = "Pesar",
+                onAction = onOpenWeight,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp),
+                icon = R.drawable.ic_scale,
+            )
+        }
+
         val todayDay = state.todayDay
         val session = todayDay?.session
         Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp)) {
@@ -147,6 +165,7 @@ fun TodayScreen(
                     onStart = { onOpenWorkout(session.id) },
                     onAlreadyDone = { marking = todayDay },
                     onSkip = { markMissed(session) },
+                    onOpenExercise = onOpenExercise,
                 )
                 session.status == SessionStatus.MISSED -> MissedCard(
                     session = session,
@@ -207,7 +226,7 @@ private fun WeekStrip(days: List<DayView>, today: LocalDate, onOpenWeek: () -> U
 }
 
 @Composable
-private fun Banner(text: String, action: String, onAction: () -> Unit, modifier: Modifier = Modifier) {
+private fun Banner(text: String, action: String, onAction: () -> Unit, modifier: Modifier = Modifier, @DrawableRes icon: Int = R.drawable.ic_timer) {
     Row(
         modifier
             .fillMaxWidth()
@@ -217,7 +236,7 @@ private fun Banner(text: String, action: String, onAction: () -> Unit, modifier:
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        AppIcon(R.drawable.ic_timer, null, tint = Palette.Orange, size = 20.dp)
+        AppIcon(icon, null, tint = Palette.Orange, size = 20.dp)
         Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         TextButton(onClick = onAction, modifier = Modifier.heightIn(min = 48.dp)) {
             Text(action, color = Palette.Orange, fontWeight = FontWeight.Bold)
@@ -246,6 +265,7 @@ private fun TodayCard(
     onStart: () -> Unit,
     onAlreadyDone: () -> Unit,
     onSkip: () -> Unit,
+    onOpenExercise: (String) -> Unit,
 ) {
     val session = day.session ?: return
     val started = session.startedAt != null
@@ -267,19 +287,9 @@ private fun TodayCard(
         }
         if (state.preview.isNotEmpty()) {
             Column {
-                val shown = state.preview.take(3)
-                shown.forEach { item ->
-                    HorizontalDivider(color = Palette.Line)
-                    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(item.exerciseName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                        Text("${item.sets} × ${item.reps}", style = MaterialTheme.typography.bodyMedium, color = Palette.TextMuted)
-                    }
-                }
-                val rest = state.preview.size - shown.size
-                if (rest > 0) {
-                    HorizontalDivider(color = Palette.Line)
-                    Text("+ $rest exercícios", style = MaterialTheme.typography.bodyMedium, color = Palette.TextMuted, modifier = Modifier.padding(vertical = 10.dp))
-                }
+                HorizontalDivider(color = Palette.Line)
+                SessionExerciseList(state.preview, onOpenExercise)
+                Text("Toque em um exercício para ver o movimento e o vídeo.", style = MaterialTheme.typography.bodySmall, color = Palette.TextMuted, modifier = Modifier.padding(top = 6.dp))
             }
         }
         PrimaryButton(if (started) "Continuar treino" else "Começar treino", onStart, Modifier.fillMaxWidth(), icon = R.drawable.ic_play)

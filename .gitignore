@@ -12,3 +12,7 @@ captures/
 keystore.properties
 *.jks
 *.keystore
+# Cache do deploy do Firebase
+.firebase/
+# Projeto do Firebase (nome do projeto): só na máquina
+.firebaserc

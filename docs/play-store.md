@@ -76,7 +76,14 @@ além do SHA-1 de debug.
 ## 4. Formulários do Console
 
 **Segurança dos dados** (revise com o que o app faz na sua versão):
-- Dados de treino: **não coletados** (ficam só no aparelho; o backup do Android é do sistema, não do app).
+- Dados de treino: **coletados, opcional**, só com o painel do treinador conectado (Firebase). Declare em
+  *Saúde e condicionamento físico › Informações de condicionamento físico* (plano, treinos feitos, cargas); o
+  comentário do treino entra em *Atividade no app › Outro conteúdo gerado pelo usuário*. Finalidade:
+  **funcionalidade do app**; **compartilhado** com o treinador que a pessoa pareou (é a função do recurso); a pessoa
+  pode pedir a exclusão (botão "Desconectar e apagar da nuvem").
+- Nome (o que a pessoa digita ao conectar): *Informações pessoais › Nome*, coletado, opcional, funcionalidade do app.
+- Peso: *Saúde e condicionamento físico › Informações de saúde*, coletado só se a pessoa ligar "Compartilhar meu peso".
+- Identificadores: o Firebase cria um id de conta anônima. Declare em *IDs do dispositivo ou outros IDs*, opcional.
 - Termos de busca de vídeo: enviados à YouTube Data API para buscar vídeos. Declare em
   *Atividade no app › Histórico de pesquisa no app* como **coletado**, finalidade **funcionalidade do app**,
   **não compartilhado**, **não vinculado à identidade**, e marque que a coleta é **opcional**

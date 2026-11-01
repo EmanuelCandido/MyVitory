@@ -22,6 +22,28 @@ interface ExerciseDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(exercises: List<ExerciseEntity>)
+
+    @Query("SELECT * FROM exercises WHERE id = :id")
+    suspend fun get(id: String): ExerciseEntity?
+
+    @Insert
+    suspend fun insert(exercise: ExerciseEntity)
+
+    @Update
+    suspend fun update(exercise: ExerciseEntity)
+
+    /** Em quantos treinos do plano e séries registradas o exercício aparece: com uso, não dá para apagar. */
+    @Query(
+        """SELECT (SELECT COUNT(*) FROM template_items WHERE exerciseId = :id) +
+                  (SELECT COUNT(*) FROM set_logs WHERE exerciseId = :id)"""
+    )
+    suspend fun usageCount(id: String): Int
+
+    @Query("DELETE FROM exercises WHERE id = :id AND custom = 1")
+    suspend fun deleteCustom(id: String)
+
+    @Query("SELECT * FROM exercises WHERE custom = 1")
+    suspend fun getCustom(): List<ExerciseEntity>
 }
 
 /** Item de treino já com o nome do exercício, para listas. */
@@ -34,11 +56,12 @@ data class TemplateItemRow(
     val sets: Int,
     val reps: Int,
     val restSec: Int,
+    val note: String = "",
 )
 
 @Dao
 interface TemplateDao {
-    @Query("SELECT * FROM templates ORDER BY code")
+    @Query("SELECT * FROM templates WHERE weekOnly = 0 ORDER BY code")
     fun observeTemplates(): Flow<List<TemplateEntity>>
 
     @Query("SELECT * FROM templates WHERE id = :id")
@@ -57,7 +80,7 @@ interface TemplateDao {
     suspend fun updateTemplate(template: TemplateEntity)
 
     @Query(
-        """SELECT i.id, i.templateId, i.exerciseId, e.name AS exerciseName, i.position, i.sets, i.reps, i.restSec
+        """SELECT i.id, i.templateId, i.exerciseId, e.name AS exerciseName, i.position, i.sets, i.reps, i.restSec, i.note
            FROM template_items i JOIN exercises e ON e.id = i.exerciseId
            WHERE i.templateId = :templateId ORDER BY i.position"""
     )
@@ -79,12 +102,47 @@ interface TemplateDao {
     @Query("UPDATE template_items SET sets = :sets, reps = :reps WHERE id = :itemId")
     suspend fun updateItemVolume(itemId: Long, sets: Int, reps: Int)
 
+    @Query("UPDATE template_items SET restSec = :restSec WHERE id = :itemId")
+    suspend fun updateItemRest(itemId: Long, restSec: Int)
+
+    @Query("UPDATE template_items SET note = :note WHERE id = :itemId")
+    suspend fun updateItemNote(itemId: Long, note: String)
+
+    @Query("UPDATE template_items SET position = :position WHERE id = :itemId")
+    suspend fun updateItemPosition(itemId: Long, position: Int)
+
+    @Query("SELECT * FROM template_items WHERE id = :itemId")
+    suspend fun getItem(itemId: Long): TemplateItemEntity?
+
+    @Query("DELETE FROM template_items WHERE templateId = :templateId")
+    suspend fun deleteItems(templateId: Long)
+
+    /** Marca o treino como mudado agora (o sync com o painel usa para decidir qual versão vale). */
+    @Query("UPDATE templates SET updatedAt = :at WHERE id IN (:templateIds)")
+    suspend fun touch(templateIds: List<Long>, at: Long)
+
+    @Query("SELECT * FROM templates WHERE weekOnly = 0 ORDER BY code")
+    suspend fun getBaseTemplates(): List<TemplateEntity>
+
+    @Query("DELETE FROM templates WHERE id = :id")
+    suspend fun deleteTemplate(id: Long)
+
+    /** Apaga uma cópia "só nesta semana" que nenhum dia usa mais. */
+    @Query(
+        """DELETE FROM templates WHERE id = :id AND weekOnly = 1 AND id NOT IN (SELECT templateId FROM sessions WHERE templateId IS NOT NULL)
+           AND id NOT IN (SELECT mergedTemplateId FROM sessions WHERE mergedTemplateId IS NOT NULL)""")
+    suspend fun deleteUnusedWeekOnly(id: Long)
+
     @Query("DELETE FROM template_items WHERE id = :itemId")
     suspend fun deleteItem(itemId: Long)
 
-    /** Troca "no plano todo": o treino passa a usar outro exercício na mesma posição. */
-    @Query("UPDATE template_items SET exerciseId = :to WHERE templateId = :templateId AND exerciseId = :from")
-    suspend fun replaceExercise(templateId: Long, from: String, to: String)
+    /** Treino do plano base com este código: de onde saiu uma cópia "só nesta semana". */
+    @Query("SELECT * FROM templates WHERE code = :code AND weekOnly = 0 LIMIT 1")
+    suspend fun getBaseByCode(code: String): TemplateEntity?
+
+    /** Troca "no plano todo": os itens passam a usar outro exercício na mesma posição. */
+    @Query("UPDATE template_items SET exerciseId = :exerciseId WHERE id IN (:itemIds)")
+    suspend fun setExercise(itemIds: List<Long>, exerciseId: String)
 
     @Query("SELECT DISTINCT exerciseId FROM template_items")
     fun observeExerciseIdsInPlans(): Flow<List<String>>
@@ -109,6 +167,10 @@ interface PlanDao {
 
     @Upsert
     suspend fun upsert(days: List<PlanDayEntity>)
+
+    /** Dias do plano base que usavam um treino apagado viram descanso. */
+    @Query("UPDATE plan_days SET templateId = NULL, updatedAt = :at WHERE templateId = :templateId")
+    suspend fun clearTemplate(templateId: Long, at: Long)
 }
 
 @Dao
@@ -137,12 +199,49 @@ interface SessionDao {
     @Update
     suspend fun update(session: SessionEntity)
 
+    @Query("UPDATE sessions SET name = :name WHERE templateId = :templateId")
+    suspend fun renameForTemplate(templateId: Long, name: String)
+
+    /** Treinos de :from em diante, ainda não começados, que usam o treino (sozinho ou fundido). */
+    @Query(
+        """SELECT * FROM sessions WHERE date >= :from AND status = 'PLANNED' AND startedAt IS NULL
+           AND (templateId = :templateId OR mergedTemplateId = :templateId)"""
+    )
+    suspend fun getUpcomingWithTemplate(from: LocalDate, templateId: Long): List<SessionEntity>
+
+    /**
+     * O treino que o recálculo levou para :date saiu de lá: o perdido volta a pedir recálculo.
+     * Quem tem o treino :keepTemplateId continua resolvido (o dia ainda tem esse treino).
+     */
+    @Query(
+        """UPDATE sessions SET resolved = 0, movedTo = NULL
+           WHERE movedTo = :date AND status = 'MISSED' AND templateId IS NOT :keepTemplateId"""
+    )
+    suspend fun reopenMovedTo(date: LocalDate, keepTemplateId: Long?)
+
+    @Query("SELECT * FROM sessions WHERE templateId = :templateId LIMIT 1")
+    fun observeByTemplate(templateId: Long): Flow<SessionEntity?>
+
     @Query("DELETE FROM sessions WHERE id = :id")
     suspend fun delete(id: Long)
 
+    /** Treinos de :from em diante, não começados, de um treino que foi apagado (inclusive os mudados só nesta semana). */
+    @Query(
+        """DELETE FROM sessions WHERE date >= :from AND status = 'PLANNED' AND startedAt IS NULL AND templateId = :templateId
+           AND id NOT IN (SELECT DISTINCT sessionId FROM set_logs)"""
+    )
+    suspend fun deleteUntouchedWithTemplate(from: LocalDate, templateId: Long)
+
+    /** Perdido de um treino apagado: não tem mais o que recalcular. */
+    @Query("UPDATE sessions SET resolved = 1 WHERE status = 'MISSED' AND resolved = 0 AND templateId = :templateId")
+    suspend fun resolveMissedWithTemplate(templateId: Long)
+
+    @Query("UPDATE sessions SET comment = :comment WHERE id = :id")
+    suspend fun setComment(id: Long, comment: String?)
+
     /** Sessões futuras que ninguém começou (e descansos decididos): refeitas quando o plano base muda. */
     @Query(
-        """DELETE FROM sessions WHERE date >= :from AND status IN ('PLANNED', 'REST') AND startedAt IS NULL
+        """DELETE FROM sessions WHERE date >= :from AND status IN ('PLANNED', 'REST') AND startedAt IS NULL AND special = 0
            AND id NOT IN (SELECT DISTINCT sessionId FROM set_logs)"""
     )
     suspend fun deleteUntouchedFrom(from: LocalDate)
@@ -182,6 +281,9 @@ interface SetLogDao {
 
     @Query("SELECT * FROM set_logs WHERE sessionId = :sessionId")
     suspend fun getForSession(sessionId: Long): List<SetLogEntity>
+
+    @Query("SELECT * FROM set_logs WHERE sessionId IN (:sessionIds) ORDER BY position, setIndex")
+    suspend fun getForSessions(sessionIds: List<Long>): List<SetLogEntity>
 
     @Insert
     suspend fun insertAll(logs: List<SetLogEntity>): List<Long>
@@ -241,4 +343,57 @@ interface AvailabilityDao {
 
     @Query("DELETE FROM unavailable_days WHERE date = :date")
     suspend fun remove(date: LocalDate)
+}
+
+@Dao
+interface WeightDao {
+    @Query("SELECT * FROM weights ORDER BY date")
+    fun observeAll(): Flow<List<WeightEntity>>
+
+    @Query("SELECT * FROM weights ORDER BY date DESC LIMIT 1")
+    suspend fun latest(): WeightEntity?
+
+    @Query("SELECT * FROM weights WHERE date = :date")
+    suspend fun get(date: LocalDate): WeightEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(weight: WeightEntity)
+
+    @Query("DELETE FROM weights WHERE date = :date")
+    suspend fun delete(date: LocalDate)
+}
+
+@Dao
+interface SyncDao {
+    @Query("SELECT * FROM sync_tombstones")
+    suspend fun tombstones(): List<TombstoneEntity>
+
+    @Upsert
+    suspend fun addTombstones(tombstones: List<TombstoneEntity>)
+
+    @Query("DELETE FROM sync_tombstones")
+    suspend fun clearTombstones()
+
+    @Query("SELECT * FROM sync_sent_days")
+    suspend fun sentDays(): List<SentDayEntity>
+
+    @Upsert
+    suspend fun markSent(days: List<SentDayEntity>)
+
+    @Query("DELETE FROM sync_sent_days WHERE date IN (:dates)")
+    suspend fun forgetSent(dates: List<LocalDate>)
+
+    @Query("DELETE FROM sync_sent_days")
+    suspend fun clearSent()
+
+    /**
+     * Muda sempre que algo que vai para o painel muda (o Room reemite a cada escrita nessas tabelas).
+     * O valor em si não importa: serve de gatilho para agendar o sync.
+     */
+    @Query(
+        """SELECT (SELECT COUNT(*) FROM templates) + (SELECT COUNT(*) FROM template_items) + (SELECT COUNT(*) FROM plan_days)
+                + (SELECT COUNT(*) FROM exercises) + (SELECT COUNT(*) FROM sync_tombstones) + (SELECT COUNT(*) FROM sessions)
+                + (SELECT COUNT(*) FROM set_logs) + (SELECT COUNT(*) FROM weights)"""
+    )
+    fun observeChanges(): Flow<Int>
 }

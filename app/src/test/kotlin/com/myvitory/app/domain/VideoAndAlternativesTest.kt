@@ -37,12 +37,15 @@ class VideoAndAlternativesTest {
     @Test
     fun `alternativas trabalham o mesmo músculo principal`() {
         val legPress = catalog.first { it.id == "leg_press_45" }
-        val alternatives = Alternatives.rank(legPress, catalog).map { it.id }
-        assertTrue(alternatives.containsAll(listOf("agachamento_hack", "agachamento_bulgaro", "cadeira_extensora")))
-        assertFalse("leg_press_45" in alternatives)
-        assertTrue(alternatives.none { id -> catalog.first { it.id == id }.primary.none { it == Muscle.QUADS } })
+        val all = Alternatives.rank(legPress, catalog, limit = 50).map { it.id }
+        assertTrue(all.containsAll(listOf("agachamento_hack", "agachamento_bulgaro", "cadeira_extensora")))
+        assertFalse("leg_press_45" in all)
+        assertTrue(all.none { id -> catalog.first { it.id == id }.primary.none { it == Muscle.QUADS } })
         // Mesmos músculos (principal e de apoio) vêm primeiro; entre eles, outro equipamento ganha (aparelho ocupado).
-        assertEquals(listOf("agachamento_bulgaro", "agachamento_hack"), alternatives.take(2))
+        val top = Alternatives.rank(legPress, catalog)
+        assertEquals(5, top.size)
+        assertTrue(top.all { it.primary == listOf(Muscle.QUADS) && it.secondary == listOf(Muscle.GLUTES) && it.equipment != "Máquina" })
+        assertTrue(all.indexOf("agachamento_hack") < all.indexOf("cadeira_extensora"))
     }
 
     @Test

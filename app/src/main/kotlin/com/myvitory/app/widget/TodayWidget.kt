@@ -60,6 +60,8 @@ object WidgetContentLoader {
         val day = week.first { it.date == today }
         val next = week.firstOrNull { it.date.isAfter(today) && it.session?.status == SessionStatus.PLANNED }
         val session = day.session
+        // Mesma regra do recálculo: treino perdido sobre o qual ainda não se decidiu nada.
+        val pendingMissed = week.any { d -> d.session?.let { it.status == SessionStatus.MISSED && !it.resolved && it.templateId != null } == true }
         val nextLine = next?.let { "Próximo: ${it.date.dayOfWeek.long().lowercase()} · ${it.session?.name}" } ?: "Sem mais treinos nesta semana"
         return when {
             session == null || day.state == DayState.REST -> WidgetContent(today, "Descanso", nextLine, WidgetAction.OPEN)
@@ -72,7 +74,14 @@ object WidgetContentLoader {
             )
             session.status == SessionStatus.DONE || session.status == SessionStatus.PARTIAL ->
                 WidgetContent(today, "${session.name} ✓", nextLine, WidgetAction.OPEN)
-            else -> WidgetContent(today, session.name, "Não vai dar hoje · ${nextLine.lowercase()}", WidgetAction.REPLAN)
+            pendingMissed -> WidgetContent(today, session.name, "Não vai dar hoje · ${nextLine.lowercase()}", WidgetAction.REPLAN)
+            // Já recalculado (ou pulado): diz para onde o treino foi, sem oferecer reorganizar de novo.
+            else -> WidgetContent(
+                today,
+                session.name,
+                session.movedTo?.let { "Foi para ${it.dayOfWeek.long().lowercase()}" } ?: nextLine,
+                WidgetAction.OPEN,
+            )
         }
     }
 }
@@ -126,7 +135,8 @@ private fun WidgetBody(context: Context, content: WidgetContent) {
         if (label != null) {
             val target = when (content.action) {
                 WidgetAction.START, WidgetAction.CONTINUE -> intent(context, Notifications.OPEN_WORKOUT, content.sessionId)
-                else -> open
+                WidgetAction.REPLAN -> intent(context, Notifications.OPEN_REPLAN, null)
+                WidgetAction.OPEN -> open
             }
             Spacer(GlanceModifier.height(8.dp))
             Box(

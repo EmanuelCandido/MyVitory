@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "updatedBy": "web",
+  "templates": {
+    "f00d": {
+      "code": "A",
+      "name": "Peito + Tríceps",
+      "updatedAt": 1730000000000,
+      "items": [
+        { "exerciseId": "supino_reto", "sets": 4, "reps": 8, "restSec": 120, "note": "Descer em 3 s" },
+        { "exerciseId": "custom_abc", "sets": 3, "reps": 12, "restSec": 60, "note": "" }
+      ]
+    }
+  },
+  "week": {
+    "1": { "templateId": "f00d", "updatedAt": 1730000000001 },
+    "2": { "templateId": null, "updatedAt": 0 }
+  },
+  "exercises": {
+    "custom_abc": {
+      "name": "Abdução na polia",
+      "equipment": "Polia",
+      "primary": ["GLUTES"],
+      "secondary": ["ADDUCTORS"],
+      "updatedAt": 5
+    }
+  },
+  "deleted": { "template:velho": 42 }
+}

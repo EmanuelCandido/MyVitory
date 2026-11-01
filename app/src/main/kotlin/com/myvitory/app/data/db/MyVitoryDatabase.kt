@@ -19,8 +19,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         CachedVideoEntity::class,
         PinnedVideoEntity::class,
         UnavailableDayEntity::class,
+        WeightEntity::class,
+        TombstoneEntity::class,
+        SentDayEntity::class,
     ],
-    version = 5,
+    version = 9,
 )
 @TypeConverters(Converters::class)
 abstract class MyVitoryDatabase : RoomDatabase() {
@@ -31,6 +34,8 @@ abstract class MyVitoryDatabase : RoomDatabase() {
     abstract fun setLogs(): SetLogDao
     abstract fun videos(): VideoDao
     abstract fun availability(): AvailabilityDao
+    abstract fun weights(): WeightDao
+    abstract fun sync(): SyncDao
 
     companion object {
         /** Fase 2: recálculo da semana (treino movido e decisão tomada). */
@@ -71,9 +76,54 @@ abstract class MyVitoryDatabase : RoomDatabase() {
             }
         }
 
+        /** v0.7: exercícios criados pelo usuário. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE exercises ADD COLUMN custom INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** v0.8: mudanças só para uma semana. */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE templates ADD COLUMN weekOnly INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE sessions ADD COLUMN special INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** v0.9: acompanhamento de peso. */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `weights` (`date` INTEGER NOT NULL, `kg` REAL NOT NULL, PRIMARY KEY(`date`))")
+            }
+        }
+
+        /**
+         * v0.10: painel do treinador. Id estável dos treinos (os que já existem ganham um aleatório), horário da
+         * última mudança para o sync, observação por exercício, comentário do treino e as tabelas do sync.
+         */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE templates ADD COLUMN remoteId TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE templates ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE templates SET remoteId = lower(hex(randomblob(16)))")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_templates_remoteId` ON `templates` (`remoteId`)")
+                db.execSQL("ALTER TABLE template_items ADD COLUMN note TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE plan_days ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE exercises ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE sessions ADD COLUMN comment TEXT")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `sync_tombstones` (`key` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, PRIMARY KEY(`key`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `sync_sent_days` (`date` INTEGER NOT NULL, `hash` INTEGER NOT NULL, PRIMARY KEY(`date`))")
+            }
+        }
+
+        val ALL_MIGRATIONS = arrayOf(
+            MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+        )
+
         fun create(context: Context): MyVitoryDatabase =
             Room.databaseBuilder(context, MyVitoryDatabase::class.java, "myvitory.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(*ALL_MIGRATIONS)
                 .build()
     }
 }

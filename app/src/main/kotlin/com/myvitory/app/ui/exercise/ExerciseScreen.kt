@@ -43,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,6 +61,7 @@ import com.myvitory.app.ui.appViewModel
 import com.myvitory.app.ui.components.AppIcon
 import com.myvitory.app.ui.components.PillTabs
 import com.myvitory.app.ui.components.SectionLabel
+import com.myvitory.app.ui.library.ExerciseEditorDialog
 import com.myvitory.app.ui.theme.BarlowCondensed
 import com.myvitory.app.ui.theme.Palette
 import com.myvitory.app.ui.video.YouTubePlayerBox
@@ -77,12 +79,18 @@ fun ExerciseScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     val undo = LocalUndo.current
     var pasting by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
     var playerMessage by remember(state.current?.videoId) { mutableStateOf<String?>(null) }
 
     Column(Modifier.fillMaxSize().background(Palette.Ground).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) { AppIcon(R.drawable.ic_arrow_back, "Voltar") }
-            Text(state.exercise?.name.orEmpty(), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
+            Text(state.exercise?.name.orEmpty(), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).semantics { heading() })
+            if (state.exercise?.custom == true) {
+                IconButton(onClick = { editing = true }, modifier = Modifier.size(48.dp)) { AppIcon(R.drawable.ic_edit, "Editar exercício", size = 20.dp) }
+                IconButton(onClick = { deleting = true }, modifier = Modifier.size(48.dp)) { AppIcon(R.drawable.ic_trash, "Apagar exercício", size = 20.dp) }
+            }
         }
 
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 32.dp)) {
@@ -141,6 +149,21 @@ fun ExerciseScreen(
                     }
                 }
 
+                state.gifUrl?.let { gif ->
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Movimento", style = MaterialTheme.typography.headlineSmall)
+                        // Fundo branco: os GIFs do ExerciseDB são desenhados sobre branco.
+                        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color.White), Alignment.Center) {
+                            AsyncImage(
+                                model = gif,
+                                contentDescription = "Animação de ${state.exercise?.name.orEmpty()}",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxWidth(0.8f).aspectRatio(1f),
+                            )
+                        }
+                    }
+                }
+
                 if (state.tips.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("Pontos-chave", style = MaterialTheme.typography.headlineSmall)
@@ -169,9 +192,13 @@ fun ExerciseScreen(
                                 exercise = alt,
                                 canSwap = state.canSwap,
                                 onUse = {
-                                    vm.swap(alt) { revert ->
+                                    vm.swap(alt) { inPlan, revert ->
                                         undo.show(
-                                            if (state.swapInPlan) "Trocado por ${alt.name} no plano" else "Trocado por ${alt.name} neste treino",
+                                            when {
+                                                inPlan -> "Trocado por ${alt.name} no plano"
+                                                state.swapInPlan -> "Trocado por ${alt.name} neste treino: o exercício não está no plano base"
+                                                else -> "Trocado por ${alt.name} neste treino"
+                                            },
                                             revert,
                                         )
                                         onBack()
@@ -186,6 +213,42 @@ fun ExerciseScreen(
                 MoreVideos(state, onSelect = vm::select, onRefresh = { vm.loadVideos(forceRefresh = true) }, onPaste = { pasting = true })
             }
         }
+    }
+
+    if (editing) {
+        ExerciseEditorDialog(
+            initial = state.exercise,
+            onDismiss = { editing = false },
+            onSave = { draft ->
+                vm.updateExercise(draft)
+                editing = false
+            },
+        )
+    }
+
+    if (deleting) {
+        var inUse by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { deleting = false },
+            containerColor = Palette.Ground,
+            title = { Text("Apagar exercício?") },
+            text = {
+                Text(
+                    if (inUse) "Ele está em um treino do plano ou no seu histórico. Tire dos treinos antes; o que já foi registrado fica guardado."
+                    else "“${state.exercise?.name.orEmpty()}” sai da sua lista de exercícios.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Palette.TextMuted,
+                )
+            },
+            confirmButton = {
+                if (!inUse) {
+                    TextButton(onClick = { vm.deleteExercise { ok -> if (ok) { deleting = false; onBack() } else inUse = true } }) {
+                        Text("Apagar", color = Palette.Orange, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = { TextButton(onClick = { deleting = false }) { Text(if (inUse) "Entendi" else "Cancelar", color = Palette.TextMuted) } },
+        )
     }
 
     if (pasting) {

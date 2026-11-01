@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 enum class MuscleGroup(val label: String, val muscles: Set<Muscle>) {
     CHEST("Peito", setOf(Muscle.CHEST)),
     BACK("Costas", setOf(Muscle.BACK)),
-    LEGS("Pernas", setOf(Muscle.QUADS, Muscle.HAMSTRINGS, Muscle.GLUTES, Muscle.CALVES)),
+    LEGS("Pernas", setOf(Muscle.QUADS, Muscle.HAMSTRINGS, Muscle.GLUTES, Muscle.ADDUCTORS, Muscle.CALVES)),
     SHOULDERS("Ombros", setOf(Muscle.SHOULDERS)),
     ARMS("Braços", setOf(Muscle.BICEPS, Muscle.TRICEPS, Muscle.FOREARMS)),
     ABS("Abdômen", setOf(Muscle.ABS)),
@@ -45,7 +45,7 @@ data class LibraryUiState(
     val searchEnabled: Boolean = false,
 )
 
-class LibraryViewModel(training: TrainingRepository, private val videos: VideoRepository) : ViewModel() {
+class LibraryViewModel(private val training: TrainingRepository, private val videos: VideoRepository) : ViewModel() {
     private val query = MutableStateFlow("")
     private val group = MutableStateFlow<MuscleGroup?>(null)
     private val tab = MutableStateFlow(0)
@@ -79,6 +79,12 @@ class LibraryViewModel(training: TrainingRepository, private val videos: VideoRe
 
     fun setTab(value: Int) {
         tab.value = value
+    }
+
+    fun createExercise(draft: ExerciseDraft, onCreated: (String) -> Unit) {
+        viewModelScope.launch {
+            onCreated(training.createExercise(draft.name, draft.equipment, draft.primary, draft.secondary))
+        }
     }
 
     /** Busca de vídeos só quando o usuário pede (Enter ou botão): cada busca nova gasta 1% da cota diária. */

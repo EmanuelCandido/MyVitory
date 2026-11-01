@@ -16,4 +16,6 @@ class SettingsViewModel(private val repo: SettingsRepository, val searchEnabled:
     suspend fun setYesterdayQuestion(on: Boolean) = repo.setYesterdayQuestion(on)
 
     suspend fun setBeginner(on: Boolean) = repo.setBeginner(on)
+
+    suspend fun setWeightReminder(on: Boolean) = repo.setWeightReminder(on)
 }

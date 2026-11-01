@@ -31,8 +31,10 @@ import androidx.compose.ui.platform.LocalContext
 import com.myvitory.app.MyVitoryApp
 import com.myvitory.app.R
 import com.myvitory.app.domain.SessionStatus
+import com.myvitory.app.domain.WeekLogic
 import com.myvitory.app.notify.Notifications
 import com.myvitory.app.ui.settings.SettingsScreen
+import com.myvitory.app.ui.coach.CoachScreen
 import com.myvitory.app.ui.components.AppIcon
 import com.myvitory.app.ui.exercise.ExerciseScreen
 import com.myvitory.app.ui.library.LibraryScreen
@@ -42,6 +44,7 @@ import com.myvitory.app.ui.template.TemplateEditorScreen
 import com.myvitory.app.ui.theme.Palette
 import com.myvitory.app.ui.today.TodayScreen
 import com.myvitory.app.ui.week.WeekScreen
+import com.myvitory.app.ui.weight.WeightScreen
 import com.myvitory.app.ui.workout.WorkoutScreen
 import kotlinx.coroutines.launch
 
@@ -51,7 +54,9 @@ private object Routes {
     const val RECOVERY = "recovery"
     const val REPLAN = "replan"
     const val LIBRARY = "library"
+    const val WEIGHT = "weight"
     const val SETTINGS = "settings"
+    const val COACH = "coach"
     const val WORKOUT = "workout/{sessionId}"
     const val TEMPLATE = "template/{templateId}"
     const val EXERCISE = "exercise/{exerciseId}?sessionId={sessionId}"
@@ -67,11 +72,16 @@ private val tabs = listOf(
     Tab(Routes.WEEK, "Semana", R.drawable.ic_calendar),
     Tab(Routes.RECOVERY, "Recuperação", R.drawable.ic_pulse),
     Tab(Routes.LIBRARY, "Exercícios", R.drawable.ic_dumbbell),
+    Tab(Routes.WEIGHT, "Peso", R.drawable.ic_scale),
 )
 
 /** Destinos que uma notificação pode pedir. */
 sealed interface AppLink {
     data object Today : AppLink
+    /** Lembrete mensal de pesagem. */
+    data object Weight : AppLink
+    /** "Reorganizar a semana" no widget. */
+    data object Replan : AppLink
     data class Workout(val sessionId: Long) : AppLink
     /** "Não treinei" na pergunta do dia seguinte: marca e abre a nova semana. */
     data class Missed(val sessionId: Long) : AppLink
@@ -104,6 +114,9 @@ fun MyVitoryRoot(link: AppLink? = null, onLinkHandled: () -> Unit = {}) {
         when (link) {
             null -> return@LaunchedEffect
             AppLink.Today -> nav.navigate(Routes.TODAY) { popUpTo(nav.graph.findStartDestination().id); launchSingleTop = true }
+            AppLink.Weight -> nav.navigate(Routes.WEIGHT) { popUpTo(nav.graph.findStartDestination().id); launchSingleTop = true }
+            // Por cima do Hoje: voltar do recálculo cai na tela inicial.
+            AppLink.Replan -> nav.navigate(Routes.REPLAN) { popUpTo(nav.graph.findStartDestination().id); launchSingleTop = true }
             is AppLink.Workout -> nav.navigate(Routes.workout(link.sessionId)) { launchSingleTop = true }
             is AppLink.Missed -> {
                 val training = (context.applicationContext as MyVitoryApp).container.training
@@ -111,7 +124,8 @@ fun MyVitoryRoot(link: AppLink? = null, onLinkHandled: () -> Unit = {}) {
                 Notifications.cancel(context, Notifications.ID_YESTERDAY)
                 if (undoMark != null) {
                     undo.show("Marcado como não treinado") { scope.launch { training.undoMark(undoMark) } }
-                    nav.navigate(Routes.REPLAN) { launchSingleTop = true }
+                    // Na segunda, a pergunta é sobre o domingo da semana passada: não há o que reorganizar.
+                    if (WeekLogic.replanCovers(undoMark.previous.date, training.today())) nav.navigate(Routes.REPLAN) { launchSingleTop = true }
                 }
             }
         }
@@ -169,6 +183,14 @@ fun MyVitoryRoot(link: AppLink? = null, onLinkHandled: () -> Unit = {}) {
                                 restoreState = true
                             }
                         },
+                        onOpenExercise = { nav.navigate(Routes.exercise(it)) },
+                        onOpenWeight = {
+                            nav.navigate(Routes.WEIGHT) {
+                                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
                     )
                 }
                 composable(Routes.WEEK) {
@@ -177,6 +199,7 @@ fun MyVitoryRoot(link: AppLink? = null, onLinkHandled: () -> Unit = {}) {
                         onOpenWorkout = { nav.navigate(Routes.workout(it)) },
                         onOpenTemplate = { nav.navigate(Routes.template(it)) },
                         onOpenReplan = { nav.navigate(Routes.REPLAN) { launchSingleTop = true } },
+                        onOpenExercise = { nav.navigate(Routes.exercise(it)) },
                     )
                 }
                 composable(Routes.RECOVERY) {
@@ -186,7 +209,13 @@ fun MyVitoryRoot(link: AppLink? = null, onLinkHandled: () -> Unit = {}) {
                     ReplanScreen(onBack = { nav.popBackStack() })
                 }
                 composable(Routes.SETTINGS) {
-                    SettingsScreen(onBack = { nav.popBackStack() })
+                    SettingsScreen(onBack = { nav.popBackStack() }, onOpenCoach = { nav.navigate(Routes.COACH) { launchSingleTop = true } })
+                }
+                composable(Routes.COACH) {
+                    CoachScreen(onBack = { nav.popBackStack() })
+                }
+                composable(Routes.WEIGHT) {
+                    WeightScreen(contentPadding = padding)
                 }
                 composable(Routes.LIBRARY) {
                     LibraryScreen(contentPadding = padding, onOpenExercise = { nav.navigate(Routes.exercise(it)) })
@@ -216,7 +245,11 @@ fun MyVitoryRoot(link: AppLink? = null, onLinkHandled: () -> Unit = {}) {
                     )
                 }
                 composable(Routes.TEMPLATE, arguments = listOf(navArgument("templateId") { type = NavType.LongType })) { entry ->
-                    TemplateEditorScreen(entry.arguments!!.getLong("templateId"), onBack = { nav.popBackStack() })
+                    TemplateEditorScreen(
+                        entry.arguments!!.getLong("templateId"),
+                        onBack = { nav.popBackStack() },
+                        onOpenExercise = { nav.navigate(Routes.exercise(it)) },
+                    )
                 }
             }
         }

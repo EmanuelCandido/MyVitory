@@ -8,6 +8,10 @@ import androidx.room.PrimaryKey
 import com.myvitory.app.domain.Muscle
 import com.myvitory.app.domain.SessionStatus
 import java.time.LocalDate
+import java.util.UUID
+
+/** Id estável entre aparelhos (o painel do treinador usa este, não o id local do Room). */
+fun newRemoteId(): String = UUID.randomUUID().toString().replace("-", "")
 
 @Entity(tableName = "exercises")
 data class ExerciseEntity(
@@ -16,14 +20,23 @@ data class ExerciseEntity(
     val equipment: String,
     val primary: List<Muscle>,
     val secondary: List<Muscle>,
+    /** Criado pelo usuário: pode ser editado e apagado. Os do catálogo não. */
+    @ColumnInfo(defaultValue = "0") val custom: Boolean = false,
+    /** Última mudança (ms). No sync com o painel, a versão mais recente vence. */
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 )
 
 /** Um treino da divisão (A, B, C...). */
-@Entity(tableName = "templates")
+@Entity(tableName = "templates", indices = [Index(value = ["remoteId"], unique = true)])
 data class TemplateEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val code: String,
     val name: String,
+    /** Cópia feita para um dia só ("só nesta semana"): não aparece no plano base. */
+    @ColumnInfo(defaultValue = "0") val weekOnly: Boolean = false,
+    @ColumnInfo(defaultValue = "") val remoteId: String = newRemoteId(),
+    /** Última mudança no treino ou nos exercícios dele (ms). No sync, a versão mais recente vence. */
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 )
 
 @Entity(
@@ -42,6 +55,8 @@ data class TemplateItemEntity(
     val sets: Int,
     val reps: Int,
     val restSec: Int,
+    /** Observação de execução ("descer em 3 s"), mostrada no treino. */
+    @ColumnInfo(defaultValue = "") val note: String = "",
 )
 
 /** Plano base: qual treino cai em cada dia da semana (1 = segunda ... 7 = domingo). Sem treino = descanso. */
@@ -49,6 +64,7 @@ data class TemplateItemEntity(
 data class PlanDayEntity(
     @PrimaryKey val dayOfWeek: Int,
     val templateId: Long?,
+    @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 )
 
 /** Um treino (ou um descanso decidido) em uma data. Uma linha por dia. */
@@ -70,6 +86,10 @@ data class SessionEntity(
     @ColumnInfo(defaultValue = "0") val resolved: Boolean = false,
     /** Treino fundido a este pelo recálculo: os dois no mesmo dia, com uma série a menos por exercício. */
     val mergedTemplateId: Long? = null,
+    /** Mudado só para esta semana (pelo usuário ou por um recálculo aplicado): mudar o plano base não desfaz. */
+    @ColumnInfo(defaultValue = "0") val special: Boolean = false,
+    /** Como foi o treino, nas palavras da pessoa (aparece no painel do treinador). */
+    val comment: String? = null,
 )
 
 @Entity(
@@ -119,3 +139,15 @@ data class PinnedVideoEntity(
 /** Dia em que a pessoa avisou que não pode treinar (viagem, compromisso). O recálculo não usa esse dia. */
 @Entity(tableName = "unavailable_days")
 data class UnavailableDayEntity(@PrimaryKey val date: LocalDate)
+
+/** Uma pesagem por dia, em kg. Pode ser de qualquer data (registrar uma pesagem antiga). */
+@Entity(tableName = "weights")
+data class WeightEntity(@PrimaryKey val date: LocalDate, val kg: Double)
+
+/** Treino ou exercício apagado ("template:<remoteId>", "exercise:<id>"), para o sync não trazer de volta. */
+@Entity(tableName = "sync_tombstones")
+data class TombstoneEntity(@PrimaryKey val key: String, val deletedAt: Long)
+
+/** Assinatura de cada dia já enviado ao painel: só o que mudou é reenviado. */
+@Entity(tableName = "sync_sent_days")
+data class SentDayEntity(@PrimaryKey val date: LocalDate, val hash: Int)

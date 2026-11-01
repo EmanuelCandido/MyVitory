@@ -23,8 +23,10 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.withContext
 
 /** Entrada e resultado de um recálculo, guardados juntos para explicar e aplicar a proposta. */
@@ -40,6 +42,7 @@ data class TodayLoads(val session: SessionEntity, val loads: MuscleLoads)
  * Recálculo da semana e recuperação muscular (Fase 2).
  * Lê o mesmo banco do [TrainingRepository]; a lógica de decisão fica em domain/planner.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class CoachRepository(
     private val db: MyVitoryDatabase,
     private val today: () -> LocalDate = { LocalDate.now() },
@@ -54,32 +57,32 @@ class CoachRepository(
     private val exercises = db.exercises()
     private val setLogs = db.setLogs()
 
-    private var catalogCache: Map<String, ExerciseEntity> = emptyMap()
+    /** Lido a cada uso, sem cache: exercício próprio criado ou editado conta na hora (são poucas linhas). */
+    private suspend fun catalog(): Map<String, ExerciseEntity> = exercises.getAll().associateBy { it.id }
 
-    private suspend fun catalog(): Map<String, ExerciseEntity> {
-        if (catalogCache.isEmpty()) catalogCache = exercises.getAll().associateBy { it.id }
-        return catalogCache
-    }
+    private fun loadsFor(exerciseIds: List<String>, catalog: Map<String, ExerciseEntity>): MuscleLoads =
+        loadsOf(exerciseIds.mapNotNull { catalog[it] }.map { it.primary to it.secondary })
 
-    private suspend fun loadsFor(exerciseIds: List<String>): MuscleLoads {
-        val byId = catalog()
-        return loadsOf(exerciseIds.mapNotNull { byId[it] }.map { it.primary to it.secondary })
-    }
+    private suspend fun templateLoads(templateId: Long, catalog: Map<String, ExerciseEntity>): MuscleLoads =
+        loadsFor(templates.getItems(templateId).map { it.exerciseId }, catalog)
 
-    suspend fun templateLoads(templateId: Long): MuscleLoads = loadsFor(templates.getItems(templateId).map { it.exerciseId })
+    /** Os dois treinos de um dia fundido (ou só o principal). */
+    private suspend fun dayLoads(templateId: Long?, mergedTemplateId: Long?, catalog: Map<String, ExerciseEntity>): MuscleLoads =
+        mergeLoads(templateId?.let { templateLoads(it, catalog) }.orEmpty(), mergedTemplateId?.let { templateLoads(it, catalog) }.orEmpty())
 
     /** Músculos realmente treinados: as séries marcadas; sem séries (marcou "feito" direto), o treino inteiro. */
-    suspend fun sessionLoads(session: SessionEntity): MuscleLoads {
+    private suspend fun sessionLoads(session: SessionEntity, catalog: Map<String, ExerciseEntity>): MuscleLoads {
         val done = setLogs.doneExerciseIds(session.id)
-        if (done.isNotEmpty()) return loadsFor(done)
-        return mergeLoads(session.templateId?.let { templateLoads(it) }.orEmpty(), session.mergedTemplateId?.let { templateLoads(it) }.orEmpty())
+        if (done.isNotEmpty()) return loadsFor(done, catalog)
+        return dayLoads(session.templateId, session.mergedTemplateId, catalog)
     }
 
     // ---- Recálculo ----
 
-    fun observePendingMissed(): Flow<List<SessionEntity>> {
-        val start = WeekLogic.weekStartOf(today())
-        return sessions.observePendingMissed(start, start.plusDays(6))
+    /** Segue a virada do dia (e da semana), como os outros fluxos que dependem de hoje. */
+    fun observePendingMissed(): Flow<List<SessionEntity>> = observeDate(today).flatMapLatest { date ->
+        val start = WeekLogic.weekStartOf(date)
+        sessions.observePendingMissed(start, start.plusDays(6))
     }
 
     /** Monta o problema da semana atual e roda o motor. Null quando não há treino perdido pendente. */
@@ -111,15 +114,21 @@ class CoachRepository(
             day = day.plusDays(1)
         }
 
-        val history = sessions.getTrainedSince(weekStart.minusDays(7)).map { Training(it.date, it.name, sessionLoads(it)) }
+        val catalog = catalog()
+        val history = sessions.getTrainedSince(weekStart.minusDays(7)).map { Training(it.date, it.name, sessionLoads(it, catalog)) }
         val nextWeekStart = weekStart.plusWeeks(1)
         val nextWeek = WeekLogic.daysOf(nextWeekStart).mapNotNull { d ->
             val templateId = planMap[d.dayOfWeek] ?: return@mapNotNull null
             val template = templates.getTemplate(templateId) ?: return@mapNotNull null
-            Training(d, template.name, templateLoads(templateId))
+            Training(d, template.name, templateLoads(templateId, catalog))
         }
+        // Dia já fundido por um recálculo anterior entra com os dois treinos, para a fusão não se perder.
         suspend fun workout(s: SessionEntity, missed: Boolean) =
-            Workout(s.id, s.templateId!!, s.name, templateLoads(s.templateId), s.date, missed, exerciseCount = templates.getItems(s.templateId).size)
+            Workout(
+                s.id, s.templateId!!, s.name, dayLoads(s.templateId, s.mergedTemplateId, catalog), s.date, missed,
+                exerciseCount = templates.getItems(s.templateId).size + (s.mergedTemplateId?.let { templates.getItems(it).size } ?: 0),
+                keptMergeTemplateId = s.mergedTemplateId,
+            )
         val pending = missed.map { workout(it, missed = true) } + upcoming.map { workout(it, missed = false) }
 
         val extra = extraRecoveryHours()
@@ -128,7 +137,10 @@ class CoachRepository(
         return ReplanData(missed, input, result)
     }
 
-    /** Grava a proposta: cada dia livre recebe o treino escolhido ou vira descanso. */
+    /**
+     * Grava a proposta: cada dia livre recebe o treino escolhido ou vira descanso.
+     * Dia que mudou fica marcado como "só nesta semana", para mudar o plano base não desfazer o recálculo.
+     */
     suspend fun apply(data: ReplanData, proposal: Proposal): ReplanUndo = db.withTransaction {
         val planMap = plan.getPlan().associate { DayOfWeek.of(it.dayOfWeek) to it.templateId }
         val before = mutableListOf<SessionEntity>()
@@ -141,21 +153,29 @@ class CoachRepository(
                 workout != null && row != null ->
                     sessions.update(
                         row.copy(
-                            templateId = workout.templateId, mergedTemplateId = workout.mergedWith?.templateId,
+                            templateId = workout.templateId, mergedTemplateId = workout.mergedTemplateId,
                             name = workout.name, status = SessionStatus.PLANNED,
+                            special = row.special || workout.sessionId != row.id || workout.mergedWith != null,
                         )
                     )
                 workout != null ->
                     inserted += sessions.insert(
                         SessionEntity(
-                            date = slot.date, templateId = workout.templateId, mergedTemplateId = workout.mergedWith?.templateId,
-                            name = workout.name, status = SessionStatus.PLANNED,
+                            date = slot.date, templateId = workout.templateId, mergedTemplateId = workout.mergedTemplateId,
+                            name = workout.name, status = SessionStatus.PLANNED, special = true,
                         )
                     )
                 row != null ->
-                    sessions.update(row.copy(templateId = null, mergedTemplateId = null, name = REST_NAME, status = SessionStatus.REST))
+                    sessions.update(
+                        row.copy(
+                            templateId = null, mergedTemplateId = null, name = REST_NAME, status = SessionStatus.REST,
+                            special = row.special || row.status != SessionStatus.REST,
+                        )
+                    )
                 planMap[slot.date.dayOfWeek] != null ->
-                    inserted += sessions.insert(SessionEntity(date = slot.date, templateId = null, name = REST_NAME, status = SessionStatus.REST))
+                    inserted += sessions.insert(
+                        SessionEntity(date = slot.date, templateId = null, name = REST_NAME, status = SessionStatus.REST, special = true)
+                    )
             }
         }
         data.missed.forEach { missedSession ->
@@ -164,6 +184,18 @@ class CoachRepository(
             val workout = data.input.pending.first { it.sessionId == missedSession.id }
             sessions.update(current.copy(resolved = true, movedTo = proposal.dateOf(workout)))
         }
+        // Perdido de um recálculo anterior acompanha o treino que o levou (ou fundiu) quando esse treino muda de dia.
+        val weekStart = WeekLogic.weekStartOf(today())
+        sessions.getRange(weekStart, weekStart.plusDays(6))
+            .filter { it.status == SessionStatus.MISSED && it.resolved && it.movedTo != null && data.missed.none { m -> m.id == it.id } }
+            .forEach { earlier ->
+                val carrier = data.input.pending.firstOrNull { !it.missed && it.originalDate == earlier.movedTo } ?: return@forEach
+                val newDate = proposal.dateOf(carrier)
+                if (newDate != earlier.movedTo) {
+                    before += earlier
+                    sessions.update(earlier.copy(movedTo = newDate))
+                }
+            }
         ReplanUndo(before, inserted)
     }
 
@@ -182,19 +214,20 @@ class CoachRepository(
     // ---- Recuperação ----
 
     /** Recuperação por músculo a partir dos treinos das últimas duas semanas. Reavaliada a cada emissão do banco. */
-    fun observeRecoveryEvents(): Flow<List<TrainingEvent>> =
-        sessions.observeTrainedSince(today().minusDays(14)).map { trained ->
-            trained.map { TrainingEvent(eventTime(it), sessionLoads(it)) }
+    fun observeRecoveryEvents(): Flow<List<TrainingEvent>> = observeDate(today).flatMapLatest { date ->
+        combine(sessions.observeTrainedSince(date.minusDays(14)), exercises.observeAll()) { trained, all ->
+            val catalog = all.associateBy { it.id }
+            trained.map { TrainingEvent(eventTime(it), sessionLoads(it, catalog)) }
         }
+    }
 
     fun recoveryNow(events: List<TrainingEvent>, extraHours: Int = 0): List<MuscleRecovery> =
         Recovery.status(events, clock()) { it.recoveryHours + extraHours }
 
-    fun observeTodayLoads(): Flow<TodayLoads?> {
-        val date = today()
-        return sessions.observeRange(date, date).map { rows ->
+    fun observeTodayLoads(): Flow<TodayLoads?> = observeDate(today).flatMapLatest { date ->
+        combine(sessions.observeRange(date, date), exercises.observeAll()) { rows, all ->
             val session = rows.firstOrNull()?.takeIf { it.status == SessionStatus.PLANNED && it.templateId != null }
-            session?.let { TodayLoads(it, mergeLoads(templateLoads(it.templateId!!), it.mergedTemplateId?.let { id -> templateLoads(id) }.orEmpty())) }
+            session?.let { TodayLoads(it, dayLoads(it.templateId, it.mergedTemplateId, all.associateBy { e -> e.id })) }
         }
     }
 
