@@ -19,9 +19,13 @@ class SnapshotCodecTest {
                 listOf(SnapshotItem("supino_reto", 4, 8, 120, "Descer em 3 s"), SnapshotItem("custom_abc", 3, 12, 60)),
             ),
         ),
-        week = mapOf(1 to SnapshotDay("f00d", 1_730_000_000_001), 2 to SnapshotDay(null, 0)),
+        week = mapOf(1 to SnapshotDay("f00d", 1_730_000_000_001), 2 to SnapshotDay(null, 0), 7 to SnapshotDay(null, 9, closed = true)),
         exercises = mapOf("custom_abc" to SnapshotExercise("Abdução na polia", "Polia", listOf("GLUTES"), listOf("ADDUCTORS"), 5)),
         deleted = mapOf("template:velho" to 42),
+        dates = mapOf(
+            "2026-11-02" to SnapshotDate(closed = true, label = "Finados", override = false, templateId = null, updatedAt = 10),
+            "2026-11-05" to SnapshotDate(closed = false, label = "", override = true, templateId = "f00d", updatedAt = 11),
+        ),
     )
 
     @Test

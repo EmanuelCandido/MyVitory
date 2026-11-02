@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { User } from 'firebase/auth'
+import { CalendarTab } from '../components/CalendarTab'
 import { ExercisesTab } from '../components/ExercisesTab'
 import { HistoryTab } from '../components/HistoryTab'
 import { TemplatesTab } from '../components/TemplatesTab'
@@ -9,7 +10,7 @@ import { Confirm } from '../components/ui'
 import { leaveAthlete, useDays, usePlan, useWeights, type Athlete, type PlanState } from '../lib/data'
 import { relative } from '../lib/format'
 
-const TABS = ['Semana', 'Treinos', 'Exercícios', 'Histórico', 'Peso'] as const
+const TABS = ['Semana', 'Calendário', 'Treinos', 'Exercícios', 'Histórico', 'Peso'] as const
 type Tab = (typeof TABS)[number]
 
 export function AthletePage({ user, athlete, onLeft }: { user: User; athlete: Athlete; onLeft: () => void }) {
@@ -83,6 +84,8 @@ export function AthletePage({ user, athlete, onLeft }: { user: User; athlete: At
           </p>
         ) : tab === 'Semana' ? (
           <WeekTab plan={plan.plan} days={days} edit={plan.edit} />
+        ) : tab === 'Calendário' ? (
+          <CalendarTab plan={plan.plan} days={days} edit={plan.edit} />
         ) : tab === 'Treinos' ? (
           <TemplatesTab plan={plan.plan} edit={plan.edit} />
         ) : (

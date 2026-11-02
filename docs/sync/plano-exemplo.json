@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "updatedBy": "web",
   "templates": {
     "f00d": {
@@ -14,7 +14,8 @@
   },
   "week": {
     "1": { "templateId": "f00d", "updatedAt": 1730000000001 },
-    "2": { "templateId": null, "updatedAt": 0 }
+    "2": { "templateId": null, "updatedAt": 0 },
+    "7": { "templateId": null, "updatedAt": 9, "closed": true }
   },
   "exercises": {
     "custom_abc": {
@@ -25,5 +26,9 @@
       "updatedAt": 5
     }
   },
-  "deleted": { "template:velho": 42 }
+  "deleted": { "template:velho": 42 },
+  "dates": {
+    "2026-11-02": { "closed": true, "label": "Finados", "override": false, "templateId": null, "updatedAt": 10 },
+    "2026-11-05": { "closed": false, "label": "", "override": true, "templateId": "f00d", "updatedAt": 11 }
+  }
 }

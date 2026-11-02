@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { decodePlan, encodePlan } from '../src/sync/codec'
-import { createTemplate, deleteTemplate, move, nextCode, saveExercise, setDay, updateTemplate } from '../src/sync/edits'
+import { createTemplate, dateChoice, deleteTemplate, move, nextCode, saveExercise, setClosedWeekday, setDate, setDay, updateTemplate } from '../src/sync/edits'
 import { canonical, mergePlans, samePlan, TOMBSTONE_TTL_MS } from '../src/sync/merge'
 import { emptyPlan, type PlanSnapshot, type SnapshotTemplate } from '../src/sync/types'
 
@@ -83,7 +83,10 @@ describe('formato do Firestore', () => {
     const raw = JSON.parse(readFileSync(new URL('../../docs/sync/plano-exemplo.json', import.meta.url), 'utf-8'))
     const decoded = decodePlan(raw)
     expect(decoded.templates.f00d.items[0]).toEqual({ exerciseId: 'supino_reto', sets: 4, reps: 8, restSec: 120, note: 'Descer em 3 s' })
-    expect(decoded.week['2']).toEqual({ templateId: null, updatedAt: 0 })
+    expect(decoded.week['2']).toEqual({ templateId: null, updatedAt: 0, closed: false })
+    expect(decoded.week['7'].closed).toBe(true)
+    expect(decoded.dates['2026-11-02']).toEqual({ closed: true, label: 'Finados', override: false, templateId: null, updatedAt: 10 })
+    expect(decoded.dates['2026-11-05']).toEqual({ closed: false, label: '', override: true, templateId: 'f00d', updatedAt: 11 })
     expect(decoded.exercises.custom_abc.secondary).toEqual(['ADDUCTORS'])
     expect(decoded.deleted).toEqual({ 'template:velho': 42 })
     expect(decodePlan(encodePlan(decoded))).toEqual(decoded)
@@ -129,5 +132,56 @@ describe('edições do painel', () => {
     const list = ['a', 'b', 'c', 'd']
     expect(move(list, 3, 1)).toEqual(['a', 'd', 'b', 'c'])
     expect(list).toEqual(['a', 'b', 'c', 'd'])
+  })
+})
+
+// Mesmo caso de PlanMergeTest.kt: academia fechada e datas.
+describe('academia fechada e datas', () => {
+  it('ficam com a versão mais recente, datas velhas saem e treino apagado devolve a data ao plano', () => {
+    const day = 20_400 * 24 * 60 * 60 * 1000 // 2025-11-08
+    const merged = mergePlans(
+      plan({
+        templates: { a: template('A', 1) },
+        week: { '7': { templateId: null, updatedAt: 50, closed: true } },
+        dates: {
+          '2025-11-10': { closed: true, label: 'Feriado', override: false, templateId: null, updatedAt: 30 },
+          '2025-11-11': { closed: false, label: '', override: true, templateId: 'x', updatedAt: 40 },
+          '2025-09-01': { closed: true, label: '', override: false, templateId: null, updatedAt: 5 },
+        },
+      }),
+      plan({
+        week: { '7': { templateId: null, updatedAt: 40 } },
+        dates: { '2025-11-10': { closed: false, label: '', override: false, templateId: null, updatedAt: 20 } },
+        deleted: { 'template:x': 45 },
+      }),
+      day,
+    )
+    expect(merged.week['7'].closed).toBe(true)
+    expect(merged.dates['2025-11-10']).toEqual({ closed: true, label: 'Feriado', override: false, templateId: null, updatedAt: 30 })
+    expect(merged.dates['2025-11-11']).toEqual({ closed: false, label: '', override: false, templateId: null, updatedAt: 40 })
+    expect(merged.dates['2025-09-01']).toBeUndefined()
+  })
+
+  it('fechar um dia da semana põe descanso e trava a escolha de treino', () => {
+    const p = setDay(plan({ templates: { a: template('A', 1) } }), 7, 'a', 10)
+    const closed = setClosedWeekday(p, 7, true, 20)
+    expect(closed.week['7']).toEqual({ templateId: null, updatedAt: 20, closed: true })
+    expect(setClosedWeekday(closed, 7, true, 30)).toBe(closed)
+    expect(setClosedWeekday(closed, 7, false, 30).week['7']).toEqual({ templateId: null, updatedAt: 30, closed: false })
+  })
+
+  it('data: feriado, treino escolhido e volta ao plano', () => {
+    const p = plan({ templates: { a: template('A', 1) } })
+    const holiday = setDate(p, '2026-11-02', { kind: 'closed', label: '  Finados ' }, 10)
+    expect(holiday.dates['2026-11-02']).toEqual({ closed: true, label: 'Finados', override: false, templateId: null, updatedAt: 10 })
+    expect(dateChoice(holiday, '2026-11-02')).toEqual({ kind: 'closed', label: 'Finados' })
+    const chosen = setDate(holiday, '2026-11-02', { kind: 'template', templateId: 'a' }, 20)
+    expect(dateChoice(chosen, '2026-11-02')).toEqual({ kind: 'template', templateId: 'a' })
+    const back = setDate(chosen, '2026-11-02', { kind: 'plan' }, 30)
+    expect(dateChoice(back, '2026-11-02')).toEqual({ kind: 'plan' })
+    // A linha continua, com a hora: o celular sabe que a escolha foi desfeita.
+    expect(back.dates['2026-11-02'].updatedAt).toBe(30)
+    // Data sem nada marcado não ganha linha à toa.
+    expect(setDate(p, '2026-12-25', { kind: 'plan' }, 40)).toBe(p)
   })
 })

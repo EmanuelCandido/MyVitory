@@ -27,13 +27,28 @@ object PlanMerge {
             if (chosen.templateId != null && chosen.templateId !in templates) chosen.copy(templateId = null) else chosen
         }
 
+        // Datas que já passaram há tempo saem dos dois lados (pelo mesmo relógio, para decidirem igual).
+        val oldest = now / DAY_MS - DATES_KEPT_DAYS
+        val dates = (local.dates.keys + remote.dates.keys).filter { epochDay(it) >= oldest }.sorted().associateWith { date ->
+            val chosen = newer(local.dates[date], remote.dates[date]) { it.updatedAt }!!
+            // Treino escolhido que foi apagado: a data volta a seguir o plano.
+            if (chosen.override && chosen.templateId != null && chosen.templateId !in templates) chosen.copy(override = false, templateId = null) else chosen
+        }
+
         return PlanSnapshot(
             templates = templates,
             week = week,
             exercises = exercises,
             deleted = deleted.filterValues { now - it < TOMBSTONE_TTL_MS }.toSortedMap(),
+            dates = dates,
         )
     }
+
+    const val DATES_KEPT_DAYS = 60L
+    private const val DAY_MS = 24L * 60 * 60 * 1000
+
+    /** "2026-11-02" → dias desde 1970 (UTC). Texto inválido conta como muito antigo e sai. */
+    private fun epochDay(date: String): Long = runCatching { java.time.LocalDate.parse(date).toEpochDay() }.getOrDefault(Long.MIN_VALUE)
 
     private fun <T> pick(
         local: Map<String, T>,

@@ -34,7 +34,7 @@ catalog.templates.forEach((t, i) => {
   if (i === 0) templates[remoteId].items[0].note = 'Escápulas juntas, descer controlando'
 })
 for (let d = 6; d <= 7; d++) week[String(d)] = { templateId: null, updatedAt: 0 }
-await setDoc(doc(db, 'athletes', id, 'plan', 'current'), { schema: 1, templates, week, exercises: {}, deleted: {}, updatedBy: 'app', savedAt: serverTimestamp() })
+await setDoc(doc(db, 'athletes', id, 'plan', 'current'), { schema: 2, templates, week, exercises: {}, deleted: {}, dates: {}, updatedBy: 'app', savedAt: serverTimestamp() })
 
 // Histórico: quatro semanas, cargas subindo, uma falta, um parcial, comentários.
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

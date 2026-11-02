@@ -137,6 +137,9 @@ interface TemplateDao {
     suspend fun deleteItem(itemId: Long)
 
     /** Treino do plano base com este código: de onde saiu uma cópia "só nesta semana". */
+    @Query("SELECT * FROM templates WHERE remoteId = :remoteId AND weekOnly = 0 LIMIT 1")
+    suspend fun getByRemoteId(remoteId: String): TemplateEntity?
+
     @Query("SELECT * FROM templates WHERE code = :code AND weekOnly = 0 LIMIT 1")
     suspend fun getBaseByCode(code: String): TemplateEntity?
 
@@ -346,6 +349,24 @@ interface AvailabilityDao {
 }
 
 @Dao
+interface DatePlanDao {
+    @Query("SELECT * FROM date_plans ORDER BY date")
+    suspend fun getAll(): List<DatePlanEntity>
+
+    @Query("SELECT * FROM date_plans WHERE date BETWEEN :from AND :to")
+    suspend fun getRange(from: LocalDate, to: LocalDate): List<DatePlanEntity>
+
+    @Query("SELECT * FROM date_plans WHERE date BETWEEN :from AND :to")
+    fun observeRange(from: LocalDate, to: LocalDate): Flow<List<DatePlanEntity>>
+
+    @Upsert
+    suspend fun upsert(days: List<DatePlanEntity>)
+
+    @Query("DELETE FROM date_plans WHERE date IN (:dates)")
+    suspend fun delete(dates: List<LocalDate>)
+}
+
+@Dao
 interface WeightDao {
     @Query("SELECT * FROM weights ORDER BY date")
     fun observeAll(): Flow<List<WeightEntity>>
@@ -393,7 +414,7 @@ interface SyncDao {
     @Query(
         """SELECT (SELECT COUNT(*) FROM templates) + (SELECT COUNT(*) FROM template_items) + (SELECT COUNT(*) FROM plan_days)
                 + (SELECT COUNT(*) FROM exercises) + (SELECT COUNT(*) FROM sync_tombstones) + (SELECT COUNT(*) FROM sessions)
-                + (SELECT COUNT(*) FROM set_logs) + (SELECT COUNT(*) FROM weights)"""
+                + (SELECT COUNT(*) FROM set_logs) + (SELECT COUNT(*) FROM weights) + (SELECT COUNT(*) FROM date_plans)"""
     )
     fun observeChanges(): Flow<Int>
 }

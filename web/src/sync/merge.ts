@@ -1,7 +1,18 @@
-import type { PlanSnapshot, SnapshotDay } from './types'
+import type { PlanSnapshot, SnapshotDate, SnapshotDay } from './types'
 
 /** Apagamentos mais velhos que isso já chegaram aos dois lados e saem da lista. */
 export const TOMBSTONE_TTL_MS = 90 * 24 * 60 * 60 * 1000
+
+/** Datas que passaram há mais que isso saem dos dois lados (mesma regra do app). */
+export const DATES_KEPT_DAYS = 60
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** "2026-11-02" → dias desde 1970 (UTC), como LocalDate.toEpochDay do app. */
+const epochDay = (date: string) => {
+  const [y, m, d] = date.split('-').map(Number)
+  const ms = Date.UTC(y, m - 1, d)
+  return Number.isFinite(ms) ? Math.floor(ms / DAY_MS) : -Infinity
+}
 
 /**
  * Junta duas versões do plano. Mesma regra do app (PlanMerge.kt), para os dois chegarem ao mesmo resultado:
@@ -28,7 +39,16 @@ export function mergePlans(local: PlanSnapshot, remote: PlanSnapshot, now: numbe
   const kept: Record<string, number> = {}
   for (const key of Object.keys(deleted).sort()) if (now - deleted[key] < TOMBSTONE_TTL_MS) kept[key] = deleted[key]
 
-  return { templates, week, exercises, deleted: kept }
+  const dates: Record<string, SnapshotDate> = {}
+  const oldest = Math.floor(now / DAY_MS) - DATES_KEPT_DAYS
+  for (const date of [...new Set([...Object.keys(local.dates ?? {}), ...Object.keys(remote.dates ?? {})])].sort()) {
+    if (epochDay(date) < oldest) continue
+    const chosen = newer(local.dates?.[date], remote.dates?.[date])!
+    // Treino escolhido que foi apagado: a data volta a seguir o plano.
+    dates[date] = chosen.override && chosen.templateId !== null && !(chosen.templateId in templates) ? { ...chosen, override: false, templateId: null } : chosen
+  }
+
+  return { templates, week, exercises, deleted: kept, dates }
 }
 
 function pick<T extends { updatedAt: number }>(

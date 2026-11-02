@@ -91,4 +91,31 @@ class PlanMergeTest {
         val merged = PlanMerge.merge(PlanSnapshot(deleted = mapOf("template:velho" to old, "template:novo" to now - 5)), PlanSnapshot(), now)
         assertEquals(setOf("template:novo"), merged.deleted.keys)
     }
+
+    @Test
+    fun `datas e dia fechado ficam com a versão mais recente, e treino apagado devolve a data ao plano`() {
+        val day = 20_400L * 24 * 60 * 60 * 1000 // 2025-11-08
+        val local = PlanSnapshot(
+            templates = mapOf("a" to template("A", 1)),
+            week = mapOf(7 to SnapshotDay(null, 50, closed = true)),
+            dates = mapOf(
+                "2025-11-10" to SnapshotDate(true, "Feriado", false, null, 30),
+                "2025-11-11" to SnapshotDate(false, "", true, "x", 40),
+                // Passou há mais de 60 dias: sai dos dois lados.
+                "2025-09-01" to SnapshotDate(true, "", false, null, 5),
+            ),
+        )
+        val remote = PlanSnapshot(
+            week = mapOf(7 to SnapshotDay(null, 40)),
+            dates = mapOf("2025-11-10" to SnapshotDate(false, "", false, null, 20)),
+            deleted = mapOf("template:x" to 45),
+        )
+
+        val merged = PlanMerge.merge(local, remote, day)
+
+        assertTrue(merged.week.getValue(7).closed)
+        assertEquals(SnapshotDate(true, "Feriado", false, null, 30), merged.dates["2025-11-10"])
+        assertEquals(SnapshotDate(false, "", false, null, 40), merged.dates["2025-11-11"])
+        assertFalse("2025-09-01" in merged.dates)
+    }
 }

@@ -1,4 +1,4 @@
-import { LIMITS, type PlanSnapshot, type SnapshotExercise, type SnapshotItem, type SnapshotTemplate } from './types'
+import { LIMITS, type PlanSnapshot, type SnapshotDate, type SnapshotExercise, type SnapshotItem, type SnapshotTemplate } from './types'
 
 /**
  * Mudanças que o painel faz no plano. Cada uma devolve um plano novo (sem mexer no antigo) e carimba a hora
@@ -51,8 +51,43 @@ export function deleteTemplate(plan: PlanSnapshot, id: string, now = Date.now())
 }
 
 export function setDay(plan: PlanSnapshot, day: number, templateId: string | null, now = Date.now()): PlanSnapshot {
-  if ((plan.week[String(day)]?.templateId ?? null) === templateId) return plan
-  return { ...plan, week: { ...plan.week, [String(day)]: { templateId, updatedAt: now } } }
+  const current = plan.week[String(day)]
+  if ((current?.templateId ?? null) === templateId) return plan
+  return { ...plan, week: { ...plan.week, [String(day)]: { ...current, templateId, updatedAt: now } } }
+}
+
+/** Academia fechada (ou aberta de novo) num dia da semana. Fechar põe descanso no plano base. */
+export function setClosedWeekday(plan: PlanSnapshot, day: number, closed: boolean, now = Date.now()): PlanSnapshot {
+  const current = plan.week[String(day)]
+  if ((current?.closed ?? false) === closed) return plan
+  const templateId = closed ? null : (current?.templateId ?? null)
+  return { ...plan, week: { ...plan.week, [String(day)]: { templateId, updatedAt: now, closed } } }
+}
+
+/** O que a data passa a ter: academia fechada, um treino (ou descanso) escolhido, ou o plano base. */
+export type DateChoice = { kind: 'plan' } | { kind: 'closed'; label: string } | { kind: 'template'; templateId: string | null }
+
+export function setDate(plan: PlanSnapshot, date: string, choice: DateChoice, now = Date.now()): PlanSnapshot {
+  const entry: SnapshotDate =
+    choice.kind === 'closed'
+      ? { closed: true, label: choice.label.trim().slice(0, LIMITS.label), override: false, templateId: null, updatedAt: now }
+      : choice.kind === 'template'
+        ? { closed: false, label: '', override: true, templateId: choice.templateId, updatedAt: now }
+        : { closed: false, label: '', override: false, templateId: null, updatedAt: now }
+  const current = plan.dates[date]
+  const same = current
+    ? current.closed === entry.closed && current.label === entry.label && current.override === entry.override && current.templateId === entry.templateId
+    : choice.kind === 'plan'
+  if (same) return plan
+  return { ...plan, dates: { ...plan.dates, [date]: entry } }
+}
+
+/** Como a data está no plano: o que foi escolhido para ela ou, sem escolha, o plano base. */
+export function dateChoice(plan: PlanSnapshot, date: string): DateChoice {
+  const d = plan.dates[date]
+  if (d?.closed) return { kind: 'closed', label: d.label }
+  if (d?.override) return { kind: 'template', templateId: d.templateId }
+  return { kind: 'plan' }
 }
 
 export function saveExercise(plan: PlanSnapshot, id: string, exercise: Omit<SnapshotExercise, 'updatedAt'>, now = Date.now()): PlanSnapshot {

@@ -55,6 +55,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 if (result.changedTemplates.isNotEmpty()) add(result.changedTemplates.joinToString(", "))
                 if (result.deletedTemplates.isNotEmpty()) add("removido: ${result.deletedTemplates.joinToString(", ")}")
                 if (result.weekChanged) add("dias da semana")
+                if (result.datesChanged > 0) add("datas do calendário")
             }
             if (parts.isEmpty()) return
             Notifications.post(

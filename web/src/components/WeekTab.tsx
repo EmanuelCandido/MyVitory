@@ -3,7 +3,7 @@ import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, useDraggable, u
 import { estimateMinutes, primaryMuscles, recoveryWarnings, warningText } from '../lib/analysis'
 import { muscleLabel } from '../lib/catalog'
 import { addDays, DAYS, dayOfWeek, isoDay, plural, shortDate, weekStart } from '../lib/format'
-import { setDay } from '../sync/edits'
+import { setClosedWeekday, setDay } from '../sync/edits'
 import type { DayDoc, PlanSnapshot } from '../sync/types'
 
 const STATUS: Record<DayDoc['status'], { label: string; tone: string }> = {
@@ -16,6 +16,7 @@ const STATUS: Record<DayDoc['status'], { label: string; tone: string }> = {
 
 export function statusChip(day: DayDoc, today: string) {
   if (day.status === 'MISSED' && day.movedTo) return <span className="chip blue">Movido</span>
+  if (day.closed && day.status !== 'DONE' && day.status !== 'PARTIAL') return <span className="chip">{day.closed}</span>
   if (day.unavailable && day.status !== 'DONE' && day.status !== 'PARTIAL') return <span className="chip orange">Indisponível</span>
   if (day.status === 'PLANNED' && day.date < today) return <span className="chip orange">Sem registro</span>
   if (day.status === 'PLANNED' && day.date === today) return <span className="chip lime">Hoje</span>
@@ -40,6 +41,8 @@ export function WeekTab({ plan, days, edit }: { plan: PlanSnapshot; days: DayDoc
     const day = e.over?.id
     if (typeof day !== 'number') return
     const templateId = String(e.active.id) === 'rest' ? null : String(e.active.id)
+    // Dia com a academia fechada não recebe treino: primeiro desmarque o "fechada".
+    if (templateId !== null && plan.week[String(day)]?.closed) return
     edit((p) => setDay(p, day, templateId))
   }
 
@@ -59,6 +62,7 @@ export function WeekTab({ plan, days, edit }: { plan: PlanSnapshot; days: DayDoc
           const day = index + 1
           const templateId = plan.week[String(day)]?.templateId ?? null
           const template = templateId ? plan.templates[templateId] : undefined
+          const closed = plan.week[String(day)]?.closed === true
           const date = addDays(start, index)
           const real = thisWeek.get(isoDay(date))
           const dayWarnings = warnings.filter((w) => w.day === day)
@@ -68,7 +72,9 @@ export function WeekTab({ plan, days, edit }: { plan: PlanSnapshot; days: DayDoc
                 <span className="day-name">{name}</span>
                 <span className="small faint">{shortDate(date)}</span>
               </div>
-              {template ? (
+              {closed ? (
+                <span className="day-rest">Academia fechada</span>
+              ) : template ? (
                 <div className="day-template">
                   <div className="row">
                     <span className="code-badge">{template.code}</span>
@@ -91,6 +97,7 @@ export function WeekTab({ plan, days, edit }: { plan: PlanSnapshot; days: DayDoc
                 className="select"
                 aria-label={`Treino de ${name.toLowerCase()}`}
                 value={templateId ?? ''}
+                disabled={closed}
                 onChange={(e) => edit((p) => setDay(p, day, e.target.value || null))}
               >
                 <option value="">Descanso</option>
@@ -100,6 +107,10 @@ export function WeekTab({ plan, days, edit }: { plan: PlanSnapshot; days: DayDoc
                   </option>
                 ))}
               </select>
+              <label className="row small muted" style={{ gap: 6, cursor: 'pointer' }}>
+                <input type="checkbox" checked={closed} onChange={(e) => edit((p) => setClosedWeekday(p, day, e.target.checked))} />
+                Academia fechada
+              </label>
               {real && (
                 <div className="real">
                   <span className="faint">No celular esta semana</span>
@@ -117,7 +128,8 @@ export function WeekTab({ plan, days, edit }: { plan: PlanSnapshot; days: DayDoc
       </div>
       <p className="small faint" style={{ marginTop: 14 }}>
         Mudanças no plano base valem para os próximos dias que ainda não começaram. Dias mudados só nesta semana no celular (ou pelo
-        recálculo) continuam como estão.
+        recálculo) continuam como estão. Dia com a academia fechada vira descanso e o recálculo nunca põe treino nele; feriados e
+        treinos de uma data específica ficam na aba Calendário.
       </p>
 
       <DragOverlay>

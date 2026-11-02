@@ -1,4 +1,4 @@
-import { SCHEMA, type PlanSnapshot, type SnapshotDay, type SnapshotExercise, type SnapshotTemplate } from './types'
+import { SCHEMA, type PlanSnapshot, type SnapshotDate, type SnapshotDay, type SnapshotExercise, type SnapshotTemplate } from './types'
 
 type Doc = Record<string, unknown>
 
@@ -30,7 +30,7 @@ export function decodePlan(raw: Doc): PlanSnapshot {
   for (const [day, value] of Object.entries(asDoc(raw.week))) {
     if (!/^[1-7]$/.test(day)) continue
     const d = asDoc(value)
-    week[day] = { templateId: typeof d.templateId === 'string' ? d.templateId : null, updatedAt: num(d.updatedAt) }
+    week[day] = { templateId: typeof d.templateId === 'string' ? d.templateId : null, updatedAt: num(d.updatedAt), closed: d.closed === true }
   }
 
   const exercises: Record<string, SnapshotExercise> = {}
@@ -42,7 +42,20 @@ export function decodePlan(raw: Doc): PlanSnapshot {
   const deleted: Record<string, number> = {}
   for (const [key, value] of Object.entries(asDoc(raw.deleted))) deleted[key] = num(value)
 
-  return { templates, week, exercises, deleted }
+  const dates: Record<string, SnapshotDate> = {}
+  for (const [date, value] of Object.entries(asDoc(raw.dates))) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
+    const d = asDoc(value)
+    dates[date] = {
+      closed: d.closed === true,
+      label: str(d.label),
+      override: d.override === true,
+      templateId: typeof d.templateId === 'string' ? d.templateId : null,
+      updatedAt: num(d.updatedAt),
+    }
+  }
+
+  return { templates, week, exercises, deleted, dates }
 }
 
 /** Escreve o plano no formato do Firestore. */
@@ -53,5 +66,6 @@ export function encodePlan(plan: PlanSnapshot): Doc {
     week: plan.week,
     exercises: plan.exercises,
     deleted: plan.deleted,
+    dates: plan.dates,
   }
 }

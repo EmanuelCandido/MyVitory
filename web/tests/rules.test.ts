@@ -14,7 +14,7 @@ const COACH = 'treinador1'
 const STRANGER = 'estranho'
 const CODE = 'ABCD2345'
 
-const plan = { schema: 1, templates: {}, week: {}, exercises: {}, deleted: {}, updatedBy: 'web' }
+const plan = { schema: 2, templates: {}, week: {}, exercises: {}, deleted: {}, dates: {}, updatedBy: 'web' }
 const inMinutes = (m: number) => Timestamp.fromMillis(Date.now() + m * 60_000)
 
 beforeAll(async () => {
@@ -111,7 +111,9 @@ describe('treinador pareado', () => {
     await assertFails(setDoc(doc(db, 'athletes', ATHLETE, 'days', '2026-10-31'), { date: '2026-10-31' }))
     await assertFails(setDoc(doc(db, 'athletes', ATHLETE, 'private', 'weights'), { points: [] }))
     await assertFails(deleteDoc(doc(db, 'athletes', ATHLETE, 'plan', 'current')))
-    await assertFails(setDoc(doc(db, 'athletes', ATHLETE, 'plan', 'current'), { ...plan, schema: 2 }))
+    await assertFails(setDoc(doc(db, 'athletes', ATHLETE, 'plan', 'current'), { ...plan, schema: 3 }))
+    // App antigo (formato 1) não apaga as datas do plano.
+    await assertFails(setDoc(doc(db, 'athletes', ATHLETE, 'plan', 'current'), { ...plan, schema: 1 }))
     await assertFails(setDoc(doc(db, 'athletes', ATHLETE, 'plan', 'outro'), plan))
   })
 

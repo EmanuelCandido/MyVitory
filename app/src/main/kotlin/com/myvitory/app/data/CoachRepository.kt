@@ -96,7 +96,8 @@ class CoachRepository(
 
         val planMap = plan.getPlan().associate { DayOfWeek.of(it.dayOfWeek) to it.templateId }
         val byDate = week.associateBy { it.date }
-        val blocked = db.availability().getRange(date, weekEnd).map { it.date }.toSet()
+        // Dia indisponível para a pessoa ou academia fechada (dia da semana ou feriado): nunca recebe treino.
+        val blocked = db.availability().getRange(date, weekEnd).map { it.date }.toSet() + db.gymClosed(date, weekEnd).keys
         val slots = mutableListOf<Slot>()
         val upcoming = mutableListOf<SessionEntity>()
         var day = date

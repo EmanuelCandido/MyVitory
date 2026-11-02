@@ -65,6 +65,22 @@ data class PlanDayEntity(
     @PrimaryKey val dayOfWeek: Int,
     val templateId: Long?,
     @ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    /** A academia não abre neste dia da semana: o recálculo nunca põe treino nele. */
+    @ColumnInfo(defaultValue = "0") val closed: Boolean = false,
+)
+
+/**
+ * O que vale numa data, decidido no painel do treinador: academia fechada (feriado) ou um treino escolhido
+ * para o dia ([override], com [templateRemoteId] null = descanso). Guarda o id estável do treino, como o painel.
+ */
+@Entity(tableName = "date_plans")
+data class DatePlanEntity(
+    @PrimaryKey val date: LocalDate,
+    val closed: Boolean,
+    val label: String,
+    val override: Boolean,
+    val templateRemoteId: String?,
+    val updatedAt: Long,
 )
 
 /** Um treino (ou um descanso decidido) em uma data. Uma linha por dia. */

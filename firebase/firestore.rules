@@ -48,11 +48,12 @@ service cloud.firestore {
 
     function validPlan() {
       let plan = request.resource.data;
-      return plan.schema == 1
+      return plan.schema == 2
         && plan.templates is map && plan.templates.size() <= 40
         && plan.week is map && plan.week.size() <= 7
         && plan.exercises is map && plan.exercises.size() <= 300
         && plan.deleted is map
+        && plan.dates is map && plan.dates.size() <= 500
         && plan.updatedBy in ['app', 'web'];
     }
 

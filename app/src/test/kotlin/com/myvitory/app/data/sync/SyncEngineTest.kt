@@ -2,11 +2,13 @@ package com.myvitory.app.data.sync
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.myvitory.app.data.CoachRepository
 import com.myvitory.app.data.TrainingRepository
 import com.myvitory.app.data.db.MyVitoryDatabase
 import com.myvitory.app.domain.SessionStatus
 import com.myvitory.app.domain.WeekLogic
 import com.myvitory.app.domain.sync.PlanSnapshot
+import com.myvitory.app.domain.sync.SnapshotDate
 import com.myvitory.app.domain.sync.SnapshotDay
 import com.myvitory.app.domain.sync.SnapshotExercise
 import com.myvitory.app.domain.sync.SnapshotItem
@@ -264,5 +266,85 @@ class SyncEngineTest {
         // Desligar apaga da nuvem.
         engine.run(shareWeight = false, lastWeightsHash = shared.weightsHash)
         assertNull(remote.weights)
+    }
+
+    private suspend fun day(date: LocalDate) = training.observeWeek(WeekLogic.weekStartOf(date)).first().first { it.date == date }
+
+    @Test
+    fun `feriado e domingo fechado no painel tiram o treino do dia e o recálculo não usa esses dias`() = runBlocking {
+        engine.run(false, null)
+        val friday = monday.plusDays(4)
+        val sunday = monday.plusDays(6)
+        remote.edit { plan ->
+            plan.copy(
+                week = plan.week + (7 to SnapshotDay(null, 5_000, closed = true)),
+                dates = mapOf(friday.toString() to SnapshotDate(true, "Feriado municipal", false, null, 5_000)),
+            )
+        }
+
+        val result = engine.syncPlan()
+
+        assertEquals(1, result.datesChanged)
+        assertEquals(SessionStatus.MISSED, day(friday).session?.status)
+        assertEquals("Feriado municipal", day(friday).closedLabel)
+        assertEquals("Academia fechada", day(sunday).closedLabel)
+        assertTrue(day(sunday).unavailable)
+        val replan = CoachRepository(db, today = { today }, clock = { now }).buildReplan()!!
+        val slots = replan.input.slots.map { it.date }
+        assertFalse(friday in slots)
+        assertFalse(sunday in slots)
+        assertTrue(monday.plusDays(5) in slots) // sábado continua livre
+        assertTrue(replan.result.best.assignment.keys.none { it == friday || it == sunday })
+
+        // O feriado saiu do calendário: o treino volta para sexta.
+        remote.edit { plan -> plan.copy(dates = mapOf(friday.toString() to SnapshotDate(false, "", false, null, 6_000))) }
+        engine.syncPlan()
+        assertEquals(SessionStatus.PLANNED, day(friday).session?.status)
+        assertNull(day(friday).closedLabel)
+    }
+
+    @Test
+    fun `treino escolhido para uma data vale só naquele dia, inclusive na semana que vem`() = runBlocking {
+        engine.run(false, null)
+        val thursday = monday.plusDays(3)
+        val nextTuesday = monday.plusDays(8)
+        val legs = templateNamed("Pernas")
+        remote.edit { plan ->
+            plan.copy(
+                dates = mapOf(
+                    thursday.toString() to SnapshotDate(false, "", true, legs.remoteId, 5_000),
+                    nextTuesday.toString() to SnapshotDate(false, "", true, null, 5_000),
+                ),
+            )
+        }
+
+        engine.syncPlan()
+
+        assertEquals("Pernas", day(thursday).session?.name)
+        assertTrue(day(thursday).special)
+        training.ensureWeek(monday.plusWeeks(1))
+        assertNull(day(nextTuesday).session) // descanso escolhido
+        assertTrue(day(nextTuesday).special)
+        assertEquals("Pernas", day(monday.plusDays(9)).session?.name) // quarta seguinte segue o plano
+
+        // Desfeito no painel: quinta volta ao plano base.
+        remote.edit { plan -> plan.copy(dates = plan.dates + (thursday.toString() to SnapshotDate(false, "", false, null, 6_000))) }
+        engine.syncPlan()
+        assertEquals(db.plan().getPlan().first { it.dayOfWeek == 4 }.templateId, day(thursday).session?.templateId)
+        assertFalse(day(thursday).special)
+    }
+
+    @Test
+    fun `mudar o treino de um dia no celular não abre a academia fechada`() = runBlocking {
+        engine.run(false, null)
+        remote.edit { plan -> plan.copy(week = plan.week + (7 to SnapshotDay(null, 5_000, closed = true))) }
+        engine.syncPlan()
+
+        training.setPlanDay(DayOfWeek.SUNDAY, templateNamed("Pernas").id)
+        engine.syncPlan()
+
+        assertTrue(remote.plan!!.week.getValue(7).closed)
+        // Treino num dia fechado vai direto para o recálculo.
+        assertEquals(SessionStatus.MISSED, day(monday.plusDays(6)).session?.status)
     }
 }

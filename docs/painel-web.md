@@ -42,23 +42,36 @@ fica como está). Reinstalar o app cria outra conta anônima: é só conectar e 
 As regras estão em [`firebase/firestore.rules`](../firebase/firestore.rules) e têm testes contra o emulador em
 [`web/tests/rules.test.ts`](../web/tests/rules.test.ts).
 
-### Formato do plano (`schema: 1`)
+### Formato do plano (`schema: 2`)
 
 Exemplo completo em [`docs/sync/plano-exemplo.json`](sync/plano-exemplo.json), lido pelos testes do app e do painel.
+O formato 2 (app 0.12) trouxe a academia fechada e as datas; as regras só aceitam o 2, então um app antigo para de
+sincronizar (sem apagar as datas) até atualizar.
 
 ```jsonc
 {
-  "schema": 1,
+  "schema": 2,
   "updatedBy": "web",                 // ou "app": quem gravou por último
   "templates": {                      // remoteId (32 hex) → treino
     "f00d…": { "code": "A", "name": "Peito + Tríceps", "updatedAt": 1730000000000,
                "items": [{ "exerciseId": "supino_reto", "sets": 4, "reps": 8, "restSec": 120, "note": "" }] }
   },
-  "week": { "1": { "templateId": "f00d…", "updatedAt": 1730000000001 } },   // 1 = segunda … 7 = domingo
+  "week": { "1": { "templateId": "f00d…", "updatedAt": 1730000000001, "closed": false } },   // 1 = segunda … 7 = domingo
   "exercises": { "custom_…": { "name": "…", "equipment": "Polia", "primary": ["GLUTES"], "secondary": [], "updatedAt": 5 } },
-  "deleted": { "template:…": 1730000000002 }
+  "deleted": { "template:…": 1730000000002 },
+  "dates": {                          // aba Calendário
+    "2026-11-02": { "closed": true, "label": "Finados", "override": false, "templateId": null, "updatedAt": 10 },
+    "2026-11-05": { "closed": false, "label": "", "override": true, "templateId": "f00d…", "updatedAt": 11 }
+  }
 }
 ```
+
+- `week[d].closed`: a academia não abre nesse dia da semana. O recálculo nunca põe treino nele, e treino que cair
+  ali (pelo plano base) vai direto para o recálculo.
+- `dates[d].closed`: feriado ou dia fechado só naquela data, com nome opcional. Mesmo efeito.
+- `dates[d].override`: a data segue `templateId` (`null` = descanso) em vez do plano base, como uma mudança "só nesta
+  semana" feita no celular. Desfazer grava `override: false` com hora nova, e o celular volta o dia ao plano base.
+- Datas que passaram há mais de 60 dias saem do plano nos dois lados.
 
 Limites (o app ajusta o que vier fora): séries 1–10, repetições 1–50, descanso 0–600 s, observação até 300
 caracteres. Os exercícios do catálogo vêm de `web/src/data/catalog.json`, gerado a partir do app (abaixo).

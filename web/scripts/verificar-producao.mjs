@@ -30,7 +30,7 @@ const id = user.uid
 const code = `T${Math.random().toString(36).slice(2, 9).toUpperCase()}`.slice(0, 8).padEnd(8, 'X')
 try {
   await setDoc(doc(db, 'athletes', id), { ownerUid: id, name: 'Teste automático', createdAt: serverTimestamp() })
-  await setDoc(doc(db, 'athletes', id, 'plan', 'current'), { schema: 1, templates: {}, week: {}, exercises: {}, deleted: {}, updatedBy: 'app' })
+  await setDoc(doc(db, 'athletes', id, 'plan', 'current'), { schema: 2, templates: {}, week: {}, exercises: {}, deleted: {}, dates: {}, updatedBy: 'app' })
   await setDoc(doc(db, 'invites', code), { athleteId: id, name: 'Teste', expiresAt: Timestamp.fromMillis(Date.now() + 5 * 60_000) })
   ok('ficha, plano e código gravados pelas regras')
   if (!(await getDoc(doc(db, 'athletes', id, 'plan', 'current'))).exists()) throw new Error('plano não voltou na leitura')

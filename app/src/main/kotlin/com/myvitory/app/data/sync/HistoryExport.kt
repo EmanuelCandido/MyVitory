@@ -1,6 +1,7 @@
 package com.myvitory.app.data.sync
 
 import com.myvitory.app.data.TrainingRepository
+import com.myvitory.app.data.gymClosed
 import com.myvitory.app.data.db.MyVitoryDatabase
 import com.myvitory.app.data.db.SessionEntity
 import com.myvitory.app.data.db.SetLogEntity
@@ -21,12 +22,13 @@ class HistoryExport(private val db: MyVitoryDatabase, private val training: Trai
         if (rows.isEmpty()) return emptyMap()
         val names = db.exercises().getAll().associate { it.id to it.name }
         val blocked = db.availability().getRange(from, to).map { it.date }.toSet()
+        val closed = db.gymClosed(from, to)
         // Em blocos: o SQLite limita a quantidade de parâmetros por consulta.
         val logs = rows.map { it.id }.chunked(500).flatMap { setLogs.getForSessions(it) }.groupBy { it.sessionId }
-        return rows.associate { session -> session.date to document(session, logs[session.id].orEmpty(), names, session.date in blocked) }
+        return rows.associate { session -> session.date to document(session, logs[session.id].orEmpty(), names, session.date in blocked, closed[session.date]) }
     }
 
-    private suspend fun document(session: SessionEntity, logs: List<SetLogEntity>, names: Map<String, String>, unavailable: Boolean): Map<String, Any?> {
+    private suspend fun document(session: SessionEntity, logs: List<SetLogEntity>, names: Map<String, String>, unavailable: Boolean, closed: String?): Map<String, Any?> {
         val planned = if (session.status == SessionStatus.REST) emptyList() else training.itemsFor(session)
         val plannedById = planned.associateBy { it.exerciseId }
         val exercises = if (logs.isNotEmpty()) {
@@ -51,6 +53,7 @@ class HistoryExport(private val db: MyVitoryDatabase, private val training: Trai
             "templateId" to session.templateId?.let { templates.getTemplate(it) }?.let { if (it.weekOnly) templates.getBaseByCode(it.code)?.remoteId else it.remoteId },
             "special" to session.special,
             "unavailable" to unavailable,
+            "closed" to closed,
             "movedTo" to session.movedTo?.toString(),
             "startedAt" to session.startedAt,
             "finishedAt" to session.finishedAt,

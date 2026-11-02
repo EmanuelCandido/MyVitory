@@ -146,7 +146,7 @@ fun WeekScreen(
             day = day,
             items = items,
             templates = state.templates,
-            canChangeThisWeek = !day.date.isBefore(state.today) &&
+            canChangeThisWeek = day.closedLabel == null && !day.date.isBefore(state.today) &&
                 (session == null || (session.status == SessionStatus.PLANNED && session.startedAt == null)),
             onOpenExercise = { daySheet = null; onOpenExercise(it) },
             onPickThisWeek = { templateId ->
@@ -267,7 +267,7 @@ private fun DayRow(day: DayView, isToday: Boolean, enabled: Boolean, onClick: ()
             when (day.state) {
                 DayState.DONE -> Tag(text, background = Palette.Lime, content = Palette.Ground)
                 DayState.PARTIAL -> Tag(text, background = Palette.SurfaceHigh, content = Palette.Lime)
-                DayState.UNAVAILABLE -> Tag(text, background = Palette.SurfaceHigh, content = Palette.TextMuted)
+                DayState.UNAVAILABLE -> Tag(day.closedLabel ?: text, background = Palette.SurfaceHigh, content = Palette.TextMuted)
                 DayState.MISSED, DayState.UNMARKED, DayState.MOVED -> Tag(text, background = Palette.OrangeSoft, content = Palette.Orange)
                 DayState.TODAY -> Tag(text, background = Palette.Ground, content = Palette.Lime, modifier = Modifier.border(1.5.dp, Palette.Lime, RoundedCornerShape(8.dp)))
                 else -> Unit
@@ -394,7 +394,14 @@ private fun DayActionsSheet(
                     SheetAction(R.drawable.ic_timer, "Voltar para planejado", Palette.TextMuted) { onMark(SessionStatus.PLANNED, "Treino voltou para planejado") }
                 }
             }
-            if (canChangeAvailability) {
+            if (day.closedLabel != null) {
+                Text(
+                    "${day.closedLabel}. O recálculo não põe treino neste dia (marcado no painel do treinador).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Palette.TextMuted,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+            } else if (canChangeAvailability) {
                 if (day.unavailable) {
                     SheetAction(R.drawable.ic_calendar, "Estou disponível neste dia", Palette.Lime) { onAvailability(false) }
                 } else {

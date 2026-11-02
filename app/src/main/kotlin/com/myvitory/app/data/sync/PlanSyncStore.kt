@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.myvitory.app.data.MAX_REST_SEC
 import com.myvitory.app.data.MAX_TEXT
 import com.myvitory.app.data.TrainingRepository
+import com.myvitory.app.data.db.DatePlanEntity
 import com.myvitory.app.data.db.ExerciseEntity
 import com.myvitory.app.data.db.MyVitoryDatabase
 import com.myvitory.app.data.db.PlanDayEntity
@@ -13,11 +14,15 @@ import com.myvitory.app.data.db.TombstoneEntity
 import com.myvitory.app.data.exerciseKey
 import com.myvitory.app.data.templateKey
 import com.myvitory.app.domain.Muscle
+import com.myvitory.app.domain.WeekLogic
 import com.myvitory.app.domain.sync.PlanSnapshot
+import com.myvitory.app.domain.sync.SnapshotDate
 import com.myvitory.app.domain.sync.SnapshotDay
 import com.myvitory.app.domain.sync.SnapshotExercise
 import com.myvitory.app.domain.sync.SnapshotItem
 import com.myvitory.app.domain.sync.SnapshotTemplate
+import java.time.DayOfWeek
+import java.time.LocalDate
 
 /** O que um sync mudou no celular, para avisar a pessoa. */
 data class ImportResult(
@@ -25,8 +30,10 @@ data class ImportResult(
     val deletedTemplates: List<String> = emptyList(),
     val weekChanged: Boolean = false,
     val exercisesChanged: Int = 0,
+    /** Datas que mudaram (feriado ou treino escolhido para o dia). */
+    val datesChanged: Int = 0,
 ) {
-    val isEmpty get() = changedTemplates.isEmpty() && deletedTemplates.isEmpty() && !weekChanged && exercisesChanged == 0
+    val isEmpty get() = changedTemplates.isEmpty() && deletedTemplates.isEmpty() && !weekChanged && exercisesChanged == 0 && datesChanged == 0
 }
 
 /**
@@ -38,6 +45,7 @@ class PlanSyncStore(private val db: MyVitoryDatabase, private val training: Trai
     private val plan = db.plan()
     private val exercises = db.exercises()
     private val sync = db.sync()
+    private val datePlans = db.datePlans()
 
     suspend fun export(): PlanSnapshot = db.withTransaction {
         val base = templates.getBaseTemplates()
@@ -46,11 +54,14 @@ class PlanSyncStore(private val db: MyVitoryDatabase, private val training: Trai
             templates = base.associate { t ->
                 t.remoteId to SnapshotTemplate(t.code, t.name, t.updatedAt, templates.getItems(t.id).map { it.toSnapshot() })
             },
-            week = plan.getPlan().associate { it.dayOfWeek to SnapshotDay(it.templateId?.let(remoteIds::get), it.updatedAt) },
+            week = plan.getPlan().associate { it.dayOfWeek to SnapshotDay(it.templateId?.let(remoteIds::get), it.updatedAt, it.closed) },
             exercises = exercises.getCustom().associate { e ->
                 e.id to SnapshotExercise(e.name, e.equipment, e.primary.map { it.name }, e.secondary.map { it.name }, e.updatedAt)
             },
             deleted = sync.tombstones().associate { it.key to it.deletedAt },
+            dates = datePlans.getAll().associate { d ->
+                d.date.toString() to SnapshotDate(d.closed, d.label, d.override, d.templateRemoteId, d.updatedAt)
+            },
         )
     }
 
@@ -65,6 +76,8 @@ class PlanSyncStore(private val db: MyVitoryDatabase, private val training: Trai
         val exercisesToDelete = mutableListOf<String>()
         var exercisesChanged = 0
         var weekChanged = false
+        val reopenedDays = mutableSetOf<DayOfWeek>()
+        val dateChanges = mutableListOf<Pair<DatePlanEntity?, DatePlanEntity>>()
 
         db.withTransaction {
             // 1. Exercícios próprios primeiro: um treino novo pode usar um deles.
@@ -123,10 +136,27 @@ class PlanSyncStore(private val db: MyVitoryDatabase, private val training: Trai
                 val current = currentPlan[day]
                 if (current != null && current.updatedAt != before.week[day]?.updatedAt) return@forEach
                 val localId = d.templateId?.let { byRemote[it]?.id }?.takeIf { it !in deletedIds }
-                if (current != null && current.templateId == localId && current.updatedAt == d.updatedAt) return@forEach
-                if (current?.templateId != localId) weekChanged = true
-                plan.upsert(listOf(PlanDayEntity(day, localId, d.updatedAt)))
+                val wasClosed = current?.closed ?: false
+                if (current != null && current.templateId == localId && current.updatedAt == d.updatedAt && wasClosed == d.closed) return@forEach
+                if (current?.templateId != localId || wasClosed != d.closed) weekChanged = true
+                if (wasClosed && !d.closed) reopenedDays += DayOfWeek.of(day)
+                plan.upsert(listOf(PlanDayEntity(day, localId, d.updatedAt, d.closed)))
             }
+
+            // 3b. Datas: feriados e treino escolhido para o dia.
+            val localDates = datePlans.getAll().associateBy { it.date.toString() }
+            target.dates.forEach { (key, d) ->
+                val current = localDates[key]
+                if (current != null && current.updatedAt != before.dates[key]?.updatedAt) return@forEach
+                val date = runCatching { LocalDate.parse(key) }.getOrNull() ?: return@forEach
+                val entity = DatePlanEntity(date, d.closed, d.label.trim().take(MAX_LABEL), d.override, d.templateId, d.updatedAt)
+                if (entity == current) return@forEach
+                datePlans.upsert(listOf(entity))
+                dateChanges += current to entity
+            }
+            // Datas antigas que o sync deixou de guardar.
+            val gone = localDates.filterKeys { it !in target.dates && before.dates[it]?.updatedAt == localDates[it]?.updatedAt }
+            if (gone.isNotEmpty()) datePlans.delete(gone.values.map { it.date })
 
             // 4. Apagamentos conhecidos: os decididos agora mais os que nasceram no celular durante este sync.
             val current = sync.tombstones().associate { it.key to it.deletedAt }
@@ -147,9 +177,17 @@ class PlanSyncStore(private val db: MyVitoryDatabase, private val training: Trai
             }
         }
         renamed.forEach { training.renameUpcoming(it) }
+        if (reopenedDays.isNotEmpty()) training.reopenWeekdays(reopenedDays)
+        dateChanges.forEach { (before, after) -> training.applyDatePlan(after.date, before, after) }
         if (weekChanged) training.refreshUpcomingSessions()
+        // Feriado ou dia fechado novo: o treino desse dia vai para o recálculo.
+        if (weekChanged || dateChanges.isNotEmpty()) training.ensureWeek(WeekLogic.weekStartOf(training.today()))
 
-        return ImportResult(changed, toDelete.map { it.name }, weekChanged, exercisesChanged)
+        return ImportResult(changed, toDelete.map { it.name }, weekChanged, exercisesChanged, dateChanges.size)
+    }
+
+    private companion object {
+        const val MAX_LABEL = 60
     }
 
     private suspend fun insertItems(templateId: Long, items: List<SnapshotItem>) {

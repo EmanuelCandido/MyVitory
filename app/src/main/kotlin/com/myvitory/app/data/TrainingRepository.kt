@@ -1,6 +1,7 @@
 package com.myvitory.app.data
 
 import androidx.room.withTransaction
+import com.myvitory.app.data.db.DatePlanEntity
 import com.myvitory.app.data.db.ExerciseEntity
 import com.myvitory.app.data.db.ExerciseHistoryPoint
 import com.myvitory.app.data.db.MyVitoryDatabase
@@ -40,6 +41,8 @@ data class DayView(
     val unavailable: Boolean = false,
     /** Mudado só para esta semana (inclusive um descanso). */
     val special: Boolean = false,
+    /** A academia não abre neste dia ("Academia fechada" ou o nome do feriado). Também conta como [unavailable]. */
+    val closedLabel: String? = null,
 )
 
 data class WorkoutExercise(
@@ -76,6 +79,7 @@ class TrainingRepository(
     private val setLogs = db.setLogs()
     private val availability = db.availability()
     private val sync = db.sync()
+    private val datePlans = db.datePlans()
 
     private val seedLock = Mutex()
 
@@ -120,18 +124,75 @@ class TrainingRepository(
         seeded = true
     }
 
-    /** Cria as sessões planejadas da semana que ainda não existem. */
+    /**
+     * Cria as sessões planejadas da semana que ainda não existem. Data com treino escolhido no painel segue
+     * a escolha (como uma mudança "só nesta semana"); treino em dia de academia fechada vai para o recálculo.
+     */
     suspend fun ensureWeek(weekStart: LocalDate) {
+        val weekEnd = weekStart.plusDays(6)
         val planMap = plan.getPlan().associate { DayOfWeek.of(it.dayOfWeek) to it.templateId }
-        val existing = sessions.getRange(weekStart, weekStart.plusDays(6)).map { it.date }.toSet()
-        val toCreate = WeekLogic.sessionsToCreate(weekStart, planMap, existing)
-        if (toCreate.isEmpty()) return
-        sessions.insertAll(
-            toCreate.mapNotNull { (date, templateId) ->
-                val template = templates.getTemplate(templateId) ?: return@mapNotNull null
-                SessionEntity(date = date, templateId = templateId, name = template.name, status = SessionStatus.PLANNED)
+        val existing = sessions.getRange(weekStart, weekEnd).map { it.date }.toSet()
+        val chosen = datePlans.getRange(weekStart, weekEnd).filter { it.override && !it.closed && it.date !in existing }
+            .mapNotNull { rule ->
+                val template = rule.templateRemoteId?.let { templates.getByRemoteId(it) ?: return@mapNotNull null }
+                rule.date to template
+            }.toMap()
+        val fromPlan = WeekLogic.sessionsToCreate(weekStart, planMap, existing + chosen.keys).mapNotNull { (date, templateId) ->
+            val template = templates.getTemplate(templateId) ?: return@mapNotNull null
+            SessionEntity(date = date, templateId = templateId, name = template.name, status = SessionStatus.PLANNED)
+        }
+        val fromPanel = chosen.map { (date, template) ->
+            SessionEntity(
+                date = date, templateId = template?.id, name = template?.name ?: CoachRepository.REST_NAME,
+                status = if (template == null) SessionStatus.REST else SessionStatus.PLANNED, special = true,
+            )
+        }
+        if (fromPlan.isNotEmpty() || fromPanel.isNotEmpty()) sessions.insertAll(fromPlan + fromPanel)
+        closeGymDays(weekStart, weekEnd)
+    }
+
+    /**
+     * Treino que ainda não começou num dia de academia fechada (de hoje em diante) vira perdido: o recálculo
+     * encaixa em outro dia, como quando a pessoa avisa que não pode treinar.
+     */
+    private suspend fun closeGymDays(from: LocalDate, to: LocalDate) {
+        val start = maxOf(from, today())
+        if (start.isAfter(to)) return
+        val closed = db.gymClosed(start, to)
+        if (closed.isEmpty()) return
+        sessions.getRange(start, to).filter { it.date in closed && it.status == SessionStatus.PLANNED && it.templateId != null }
+            .forEach { session ->
+                if (isTouched(session)) return@forEach
+                sessions.update(session.copy(status = SessionStatus.MISSED, resolved = false, movedTo = null))
             }
-        )
+    }
+
+    /** A academia voltou a abrir em [date]: o treino que ficou perdido por isso (e ninguém decidiu nada) volta. */
+    internal suspend fun reopenGymDay(date: LocalDate) {
+        if (date.isBefore(today()) || availability.getRange(date, date).isNotEmpty() || db.gymClosed(date, date).isNotEmpty()) return
+        val session = sessions.getByDate(date) ?: return
+        if (session.status == SessionStatus.MISSED && !session.resolved) sessions.update(session.copy(status = SessionStatus.PLANNED))
+    }
+
+    /**
+     * Uma data mudou no painel ([before] → [after]). Feriado que saiu devolve o treino; treino escolhido para a data
+     * entra como mudança "só nesta semana"; escolha desfeita volta ao plano base. Dia já começado não muda.
+     */
+    internal suspend fun applyDatePlan(date: LocalDate, before: DatePlanEntity?, after: DatePlanEntity?) {
+        if (date.isBefore(today())) return
+        if (before?.closed == true && after?.closed != true) reopenGymDay(date)
+        val wasChosen = before?.override == true && !before.closed
+        if (after != null && after.override && !after.closed) {
+            val template = after.templateRemoteId?.let { templates.getByRemoteId(it) ?: return }
+            setDayThisWeek(date, template?.id)
+        } else if (wasChosen) {
+            resetDayToPlan(date)
+        }
+    }
+
+    /** Dias da semana que deixaram de ser fechados: os treinos desta semana que tinham ido para o recálculo voltam. */
+    internal suspend fun reopenWeekdays(days: Set<DayOfWeek>) {
+        WeekLogic.daysOf(WeekLogic.weekStartOf(today())).filter { it.dayOfWeek in days }.forEach { reopenGymDay(it) }
     }
 
     fun observeWeek(weekStart: LocalDate): Flow<List<DayView>> =
@@ -139,9 +200,10 @@ class TrainingRepository(
             sessions.observeRange(weekStart, weekStart.plusDays(6)),
             templates.observeTemplateExercises(),
             availability.observeRange(weekStart, weekStart.plusDays(6)),
-        ) { weekSessions, items, blocked ->
+            db.observeGymClosed(weekStart, weekStart.plusDays(6)),
+        ) { weekSessions, items, blocked, closed ->
             val byDate = weekSessions.associateBy { it.date }
-            val blockedDates = blocked.map { it.date }.toSet()
+            val blockedDates = blocked.map { it.date }.toSet() + closed.keys
             val exercisesByTemplate = items.groupBy({ it.templateId }, { it.exerciseId }).mapValues { it.value.toSet() }
             WeekLogic.daysOf(weekStart).map { date ->
                 // Linha REST é só um descanso decidido: para a tela, o dia não tem treino.
@@ -157,6 +219,7 @@ class TrainingRepository(
                     state = WeekLogic.dayState(date, today(), session?.status, moved = session?.movedTo != null, unavailable = date in blockedDates),
                     unavailable = date in blockedDates,
                     special = byDate[date]?.special == true,
+                    closedLabel = closed[date],
                 )
             }
         }
@@ -372,7 +435,8 @@ class TrainingRepository(
             }
         } else {
             availability.remove(date)
-            if (session != null && session.status == SessionStatus.MISSED && !session.resolved && !date.isBefore(today())) {
+            val gymClosed = db.gymClosed(date, date).isNotEmpty()
+            if (session != null && session.status == SessionStatus.MISSED && !session.resolved && !date.isBefore(today()) && !gymClosed) {
                 sessions.update(session.copy(status = SessionStatus.PLANNED))
             }
         }
@@ -459,7 +523,8 @@ class TrainingRepository(
     fun observeTemplate(templateId: Long): Flow<TemplateEntity?> = templates.observeTemplate(templateId)
 
     suspend fun setPlanDay(day: DayOfWeek, templateId: Long?) {
-        plan.upsert(listOf(PlanDayEntity(day.value, templateId, updatedAt = clock())))
+        val closed = plan.getPlan().firstOrNull { it.dayOfWeek == day.value }?.closed ?: false
+        plan.upsert(listOf(PlanDayEntity(day.value, templateId, updatedAt = clock(), closed = closed)))
         refreshUpcomingSessions()
     }
 

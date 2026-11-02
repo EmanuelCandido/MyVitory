@@ -25,7 +25,9 @@ object SnapshotCodec {
                 },
             )
         },
-        "week" to snapshot.week.entries.associate { (day, d) -> day.toString() to mapOf("templateId" to d.templateId, "updatedAt" to d.updatedAt) },
+        "week" to snapshot.week.entries.associate { (day, d) ->
+            day.toString() to mapOf("templateId" to d.templateId, "updatedAt" to d.updatedAt, "closed" to d.closed)
+        },
         "exercises" to snapshot.exercises.mapValues { (_, e) ->
             mapOf(
                 "name" to e.name,
@@ -36,6 +38,9 @@ object SnapshotCodec {
             )
         },
         "deleted" to snapshot.deleted,
+        "dates" to snapshot.dates.mapValues { (_, d) ->
+            mapOf("closed" to d.closed, "label" to d.label, "override" to d.override, "templateId" to d.templateId, "updatedAt" to d.updatedAt)
+        },
     )
 
     /** Lê o documento. Campos faltando viram vazios; versão de formato mais nova que a do app dá erro. */
@@ -64,7 +69,7 @@ object SnapshotCodec {
             week = doc.map("week").entries.mapNotNull { (key, value) ->
                 val day = key.toIntOrNull()?.takeIf { it in 1..7 } ?: return@mapNotNull null
                 val d = value.asMap()
-                day to SnapshotDay(d["templateId"] as? String, d.long("updatedAt"))
+                day to SnapshotDay(d["templateId"] as? String, d.long("updatedAt"), d["closed"] == true)
             }.toMap(),
             exercises = doc.map("exercises").mapValues { (_, value) ->
                 val e = value.asMap()
@@ -77,8 +82,14 @@ object SnapshotCodec {
                 )
             },
             deleted = doc.map("deleted").mapValues { (_, value) -> (value as? Number)?.toLong() ?: 0L },
+            dates = doc.map("dates").filterKeys { DATE.matches(it) }.mapValues { (_, value) ->
+                val d = value.asMap()
+                SnapshotDate(d["closed"] == true, d.string("label"), d["override"] == true, d["templateId"] as? String, d.long("updatedAt"))
+            },
         )
     }
+
+    private val DATE = Regex("""\d{4}-\d{2}-\d{2}""")
 
     private fun Map<String, Any?>.map(key: String): Map<String, Any?> = this[key].asMap()
 

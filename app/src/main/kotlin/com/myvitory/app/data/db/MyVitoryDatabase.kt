@@ -22,8 +22,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         WeightEntity::class,
         TombstoneEntity::class,
         SentDayEntity::class,
+        DatePlanEntity::class,
     ],
-    version = 9,
+    version = 10,
 )
 @TypeConverters(Converters::class)
 abstract class MyVitoryDatabase : RoomDatabase() {
@@ -36,6 +37,7 @@ abstract class MyVitoryDatabase : RoomDatabase() {
     abstract fun availability(): AvailabilityDao
     abstract fun weights(): WeightDao
     abstract fun sync(): SyncDao
+    abstract fun datePlans(): DatePlanDao
 
     companion object {
         /** Fase 2: recálculo da semana (treino movido e decisão tomada). */
@@ -117,8 +119,20 @@ abstract class MyVitoryDatabase : RoomDatabase() {
             }
         }
 
+        /** v0.12: dias em que a academia fecha (da semana e datas) e treino escolhido por data no painel. */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE plan_days ADD COLUMN closed INTEGER NOT NULL DEFAULT 0")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `date_plans` (`date` INTEGER NOT NULL, `closed` INTEGER NOT NULL, `label` TEXT NOT NULL, " +
+                        "`override` INTEGER NOT NULL, `templateRemoteId` TEXT, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`date`))"
+                )
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+            MIGRATION_9_10,
         )
 
         fun create(context: Context): MyVitoryDatabase =
