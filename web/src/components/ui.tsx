@@ -122,3 +122,46 @@ export function CommitInput({ value, onCommit, multiline, ...rest }: {
     />
   )
 }
+
+/**
+ * Botão que abre uma lista de opções com o nome inteiro (o select nativo cortava o nome do treino nos cards).
+ * Fecha ao escolher, com Esc ou clicando fora.
+ */
+export function Menu({ label, ariaLabel, children }: { label: ReactNode; ariaLabel: string; children: (close: () => void) => ReactNode }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+  return (
+    <div className="menu" ref={ref}>
+      <button type="button" className="btn small menu-button" aria-haspopup="menu" aria-expanded={open} aria-label={ariaLabel} onClick={() => setOpen((o) => !o)}>
+        {label}
+        <span aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="menu-list" role="menu">
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function MenuItem({ selected, onSelect, children }: { selected?: boolean; onSelect: () => void; children: ReactNode }) {
+  return (
+    <button type="button" role="menuitemradio" aria-checked={selected ?? false} className="menu-item" onClick={onSelect}>
+      {children}
+    </button>
+  )
+}
