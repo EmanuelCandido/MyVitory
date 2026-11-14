@@ -56,7 +56,7 @@ import com.myvitory.app.ui.components.ExerciseThumb
 import com.myvitory.app.ui.components.PrimaryButton
 import com.myvitory.app.ui.components.SecondaryButton
 import com.myvitory.app.ui.components.SectionLabel
-import com.myvitory.app.ui.theme.BarlowCondensed
+import com.myvitory.app.ui.theme.Mono
 import com.myvitory.app.ui.theme.Palette
 
 /**
@@ -106,9 +106,9 @@ fun AddExerciseSheet(
                 singleLine = true,
                 leadingIcon = { AppIcon(R.drawable.ic_search, null, tint = Palette.TextMuted, size = 20.dp) },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Palette.Lime,
+                    focusedBorderColor = Palette.Volt,
                     unfocusedBorderColor = Palette.LineStrong,
-                    cursorColor = Palette.Lime,
+                    cursorColor = Palette.Volt,
                 ),
                 shape = CircleShape,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -139,7 +139,7 @@ fun AddExerciseSheet(
                                 )
                             }
                             IconButton(onClick = { onPick(exercise) }, modifier = Modifier.size(48.dp)) {
-                                AppIcon(R.drawable.ic_plus, "Adicionar ${exercise.name}", tint = Palette.Lime, size = 20.dp)
+                                AppIcon(R.drawable.ic_plus, "Adicionar ${exercise.name}", tint = Palette.Volt, size = 20.dp)
                             }
                         }
                     }
@@ -189,7 +189,7 @@ private fun ExercisePreview(
                     SectionLabel("Pontos-chave")
                     tips.forEachIndexed { i, tip ->
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("${i + 1}", style = MaterialTheme.typography.titleLarge.copy(fontFamily = BarlowCondensed), color = Palette.Lime, modifier = Modifier.width(18.dp))
+                            Text("${i + 1}", style = MaterialTheme.typography.titleLarge.copy(fontFamily = Mono), color = Palette.Volt, modifier = Modifier.width(18.dp))
                             Text(tip, style = MaterialTheme.typography.bodyMedium, color = Palette.Text.copy(alpha = 0.88f))
                         }
                     }
@@ -207,7 +207,7 @@ private fun ExercisePreview(
 private fun Chip(text: String, highlight: Boolean) {
     Surface(
         shape = CircleShape,
-        color = if (highlight) Palette.Lime else Color.Transparent,
+        color = if (highlight) Palette.Volt else Color.Transparent,
         border = if (highlight) null else BorderStroke(1.dp, Palette.LineStrong),
     ) {
         Text(

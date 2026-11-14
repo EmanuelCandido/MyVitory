@@ -66,6 +66,15 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.myvitory.app.ui.components.Ticket
+import com.myvitory.app.ui.components.TicketShape
+import com.myvitory.app.ui.components.TicketStrip
+import com.myvitory.app.ui.components.SectionLabel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.myvitory.app.R
 import com.myvitory.app.data.WorkoutExercise
@@ -77,7 +86,7 @@ import com.myvitory.app.ui.appViewModel
 import com.myvitory.app.ui.components.AppIcon
 import com.myvitory.app.ui.components.SectionLabel
 import com.myvitory.app.ui.components.formatClock
-import com.myvitory.app.ui.theme.BarlowCondensed
+import com.myvitory.app.ui.components.twoDigits
 import com.myvitory.app.ui.theme.Palette
 import com.myvitory.app.timer.RestTimer
 import kotlinx.coroutines.delay
@@ -125,23 +134,19 @@ fun WorkoutScreen(sessionId: Long, onClose: () -> Unit, onOpenExercise: (String)
                 val total = data.exercises.size
                 val position = (currentIndex ?: total - 1) + 1
                 Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        if (currentIndex == null) "Todas as séries marcadas" else "Exercício $position de $total",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Palette.TextMuted,
-                    )
+                    SectionLabel(if (currentIndex == null) "Todas as séries marcadas" else "Exercício $position de $total")
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         data.exercises.forEachIndexed { i, ex ->
                             val done = ex.sets.all { it.done }
                             Box(
                                 Modifier
                                     .weight(1f)
-                                    .height(4.dp)
-                                    .clip(CircleShape)
+                                    .height(7.dp)
+                                    .clip(TicketShape)
                                     .background(
                                         when {
-                                            done -> Palette.Lime
-                                            i == currentIndex -> Palette.Lime.copy(alpha = 0.5f)
+                                            done -> Palette.Volt
+                                            i == currentIndex -> Palette.Volt.copy(alpha = 0.45f)
                                             else -> Palette.Line
                                         }
                                     )
@@ -209,14 +214,14 @@ fun WorkoutScreen(sessionId: Long, onClose: () -> Unit, onOpenExercise: (String)
                 TextButton(onClick = {
                     askEmpty = false
                     vm.markWithoutSets(SessionStatus.DONE) { undo.show("Treino marcado como feito", null); onClose() }
-                }) { Text("Fiz tudo", color = Palette.Lime) }
+                }) { Text("Fiz tudo", color = Palette.Volt) }
             },
             dismissButton = {
                 Row {
                     TextButton(onClick = {
                         askEmpty = false
                         vm.markWithoutSets(SessionStatus.MISSED) { undo.show("Marcado como não treinado", null); onClose() }
-                    }) { Text("Não treinei", color = Palette.Orange) }
+                    }) { Text("Não treinei", color = Palette.Flame) }
                     TextButton(onClick = { askEmpty = false }) { Text("Voltar", color = Palette.TextMuted) }
                 }
             },
@@ -239,10 +244,10 @@ private fun CommentField(comment: String, onCommit: (String) -> Unit) {
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Palette.Lime,
+            focusedBorderColor = Palette.Volt,
             unfocusedBorderColor = Palette.Line,
-            focusedLabelColor = Palette.Lime,
-            cursorColor = Palette.Lime,
+            focusedLabelColor = Palette.Volt,
+            cursorColor = Palette.Volt,
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -265,17 +270,16 @@ private fun TopBar(name: String, startedAt: Long?, finishedAt: Long?, onClose: (
             AppIcon(R.drawable.ic_close, "Sair do treino")
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(name, style = MaterialTheme.typography.bodySmall, color = Palette.TextMuted)
+            SectionLabel(name)
             if (startedAt != null) {
                 val end = finishedAt ?: now
-                Text(
-                    formatClock((end - startedAt) / 1000),
-                    style = MaterialTheme.typography.titleLarge.copy(fontFamily = BarlowCondensed, fontWeight = FontWeight.SemiBold),
-                )
+                Text(formatClock((end - startedAt) / 1000), style = MaterialTheme.typography.headlineSmall.copy(fontSize = 18.sp))
             }
         }
-        TextButton(onClick = onFinish, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text("Finalizar", color = Palette.Lime, style = MaterialTheme.typography.labelLarge)
+        Surface(onClick = onFinish, shape = CircleShape, color = Palette.Volt, contentColor = Palette.Ink, modifier = Modifier.padding(end = 8.dp).heightIn(min = 44.dp)) {
+            Box(Modifier.padding(horizontal = 16.dp), Alignment.Center) {
+                Text("FINALIZAR", style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.5.sp))
+            }
         }
     }
 }
@@ -297,7 +301,7 @@ private fun ExerciseRow(number: Int, exercise: WorkoutExercise, onClick: () -> U
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(
-            Modifier.size(28.dp).clip(CircleShape).background(if (complete) Palette.Lime else Palette.SurfaceHigh),
+            Modifier.size(28.dp).clip(CircleShape).background(if (complete) Palette.Volt else Palette.SurfaceHigh),
             Alignment.Center,
         ) {
             if (complete) AppIcon(R.drawable.ic_check, null, tint = Palette.Ground, size = 14.dp)
@@ -332,14 +336,14 @@ private fun ExerciseCard(
                     Text(
                         "↑ +${formatKg(s.increaseKg)} kg hoje: você bateu todas as repetições da última vez",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Palette.Lime,
+                        color = Palette.Volt,
                     )
                 }
                 if (exercise.note.isNotBlank()) {
                     Text(
                         exercise.note,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Palette.Blue,
+                        color = Palette.Sky,
                         modifier = Modifier.padding(top = 4.dp),
                     )
                 }
@@ -413,7 +417,7 @@ private fun SetRow(
                 .size(48.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .then(
-                    if (log.done) Modifier.background(Palette.Lime)
+                    if (log.done) Modifier.background(Palette.Volt)
                     else Modifier.border(2.dp, Palette.Neutral, RoundedCornerShape(14.dp))
                 )
                 .toggleable(value = log.done, role = Role.Checkbox, onValueChange = { onToggle(log) })
@@ -452,7 +456,7 @@ private fun NumberField(
             color = Palette.Text,
             textAlign = TextAlign.Center,
         ),
-        cursorBrush = SolidColor(Palette.Lime),
+        cursorBrush = SolidColor(Palette.Volt),
         modifier = modifier
             .heightIn(min = 44.dp)
             .clip(RoundedCornerShape(10.dp))
@@ -480,29 +484,49 @@ private fun RestBar(timer: RestTimer, onMinus: () -> Unit, onPlus: () -> Unit, o
     // O relógio anda a cada 250 ms, mas a barra só recompõe quando o segundo muda.
     val remaining by remember(timer) { derivedStateOf { ((timer.endsAt - now + 999) / 1000).coerceAtLeast(0) } }
     val progress = 1f - remaining.toFloat() / timer.totalSec.coerceAtLeast(1)
+    val minutes = remaining / 60
+    val seconds = remaining % 60
     Column(Modifier.fillMaxWidth().background(Palette.Surface).navigationBarsPadding()) {
         LinearProgressIndicator(
             progress = { progress },
-            modifier = Modifier.fillMaxWidth().height(3.dp),
-            color = Palette.Blue,
+            modifier = Modifier.fillMaxWidth().height(4.dp),
+            color = Palette.Flame,
             trackColor = Palette.Line,
             gapSize = 0.dp,
             drawStopIndicator = {},
         )
         Row(
-            Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 18.dp),
+            Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(Modifier.weight(1f)) {
-                Text("DESCANSO", style = MaterialTheme.typography.labelSmall, color = Palette.Blue)
-                Text(formatClock(remaining), style = MaterialTheme.typography.displaySmall.copy(fontSize = MaterialTheme.typography.displaySmall.fontSize * 0.85f))
+            Column(
+                Modifier
+                    .weight(1f)
+                    .semantics(mergeDescendants = true) { contentDescription = "Descanso: ${formatClock(remaining)}" },
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                SectionLabel("Descanso", color = Palette.Flame)
+                TicketStrip(
+                    Modifier.drawBehind {
+                        // Brilho laranja atrás do contador, como na referência.
+                        drawCircle(
+                            Brush.radialGradient(listOf(Palette.Flame.copy(alpha = 0.32f), Color.Transparent), center = Offset(size.width * 0.45f, size.height / 2), radius = size.width * 0.75f),
+                            radius = size.width * 0.75f,
+                            center = Offset(size.width * 0.45f, size.height / 2),
+                        )
+                    },
+                    tilt = false,
+                ) {
+                    Ticket(minutes.toInt().twoDigits(), unit = "m", big = true)
+                    Ticket(seconds.toInt().twoDigits(), unit = "s", big = true)
+                }
             }
             RestButton("−15", "Menos 15 segundos", onMinus)
             RestButton("+15", "Mais 15 segundos", onPlus)
-            Surface(onClick = onSkip, shape = CircleShape, color = Palette.Text, modifier = Modifier.heightIn(min = 44.dp)) {
-                Box(Modifier.padding(horizontal = 16.dp), Alignment.Center) {
-                    Text("Pular", color = Palette.Ground, style = MaterialTheme.typography.titleSmall)
+            Surface(onClick = onSkip, shape = CircleShape, color = Palette.Paper, contentColor = Palette.Ink, modifier = Modifier.heightIn(min = 48.dp)) {
+                Box(Modifier.padding(horizontal = 14.dp), Alignment.Center) {
+                    Text("PULAR", style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.5.sp))
                 }
             }
         }
@@ -513,12 +537,12 @@ private fun RestBar(timer: RestTimer, onMinus: () -> Unit, onPlus: () -> Unit, o
 private fun RestButton(text: String, description: String, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
-        modifier = Modifier.heightIn(min = 44.dp).semantics { contentDescription = description },
+        modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = description },
         shape = CircleShape,
-        border = BorderStroke(1.dp, Palette.LineStrong),
-        contentPadding = PaddingValues(horizontal = 14.dp),
+        border = BorderStroke(2.dp, Palette.LineStrong),
+        contentPadding = PaddingValues(horizontal = 10.dp),
     ) {
-        Text(text, color = Palette.Text, style = MaterialTheme.typography.titleSmall)
+        Text(text, color = Palette.Text, style = MaterialTheme.typography.labelLarge.copy(fontSize = 13.sp))
     }
 }
 

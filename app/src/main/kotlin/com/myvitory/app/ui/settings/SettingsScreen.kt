@@ -103,7 +103,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenCoach: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Palette.Ground).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) { AppIcon(R.drawable.ic_arrow_back, "Voltar") }
-            Text("Ajustes", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text("AJUSTES", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
         }
 
         Column(
@@ -112,7 +112,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenCoach: () -> Unit) {
         ) {
             Section("Lembretes")
             if (!notificationsOn && (state.todayReminder || state.yesterdayQuestion || state.weightReminder)) {
-                Surface(shape = RoundedCornerShape(16.dp), color = Palette.OrangeSoft, modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = RoundedCornerShape(16.dp), color = Palette.FlameSoft, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Notificações bloqueadas no Android. Os lembretes não vão aparecer.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                         TextButton(
@@ -124,7 +124,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenCoach: () -> Unit) {
                                 )
                             },
                             modifier = Modifier.heightIn(min = 48.dp),
-                        ) { Text("Abrir", color = Palette.Orange, fontWeight = FontWeight.Bold) }
+                        ) { Text("Abrir", color = Palette.Flame, fontWeight = FontWeight.Bold) }
                     }
                 }
             }
@@ -219,8 +219,8 @@ fun SettingsScreen(onBack: () -> Unit, onOpenCoach: () -> Unit) {
                 TimePicker(
                     state = time,
                     colors = TimePickerDefaults.colors(
-                        selectorColor = Palette.Lime,
-                        timeSelectorSelectedContainerColor = Palette.Lime,
+                        selectorColor = Palette.Volt,
+                        timeSelectorSelectedContainerColor = Palette.Volt,
                         timeSelectorSelectedContentColor = Palette.Ground,
                         clockDialColor = Palette.SurfaceHigh,
                     ),
@@ -230,7 +230,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenCoach: () -> Unit) {
                 TextButton(onClick = {
                     pickingTime = false
                     scope.launch { vm.setTime(time.hour * 60 + time.minute) }
-                }) { Text("Salvar", color = Palette.Lime, fontWeight = FontWeight.Bold) }
+                }) { Text("Salvar", color = Palette.Volt, fontWeight = FontWeight.Bold) }
             },
             dismissButton = { TextButton(onClick = { pickingTime = false }) { Text("Cancelar", color = Palette.TextMuted) } },
         )
@@ -268,7 +268,7 @@ private fun SwitchRow(title: String, subtitle: String, checked: Boolean, onChang
             checked = checked,
             onCheckedChange = null,
             colors = SwitchDefaults.colors(
-                checkedTrackColor = Palette.Lime,
+                checkedTrackColor = Palette.Volt,
                 checkedThumbColor = Palette.Ground,
                 uncheckedTrackColor = Palette.SurfaceHigh,
                 uncheckedThumbColor = Palette.TextMuted,
@@ -283,7 +283,7 @@ private fun ValueRow(title: String, value: String, enabled: Boolean, onClick: ()
     Surface(onClick = onClick, enabled = enabled, color = Palette.Surface, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = if (enabled) Palette.Text else Palette.TextFaint, modifier = Modifier.weight(1f))
-            Text(value, style = MaterialTheme.typography.titleMedium, color = if (enabled) Palette.Lime else Palette.TextFaint)
+            Text(value, style = MaterialTheme.typography.titleMedium, color = if (enabled) Palette.Volt else Palette.TextFaint)
         }
     }
 }

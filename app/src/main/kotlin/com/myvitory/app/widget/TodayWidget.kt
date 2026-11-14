@@ -106,10 +106,11 @@ class TodayWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = TodayWidget()
 }
 
-private val Ground = Color(0xFF0E0F10)
-private val Lime = Color(0xFFCDF24B)
-private val Text = Color(0xFFF3F2EE)
-private val Muted = Color(0xFFA3A39E)
+private val Ground = Color(0xFF1A1A18)
+private val Volt = Color(0xFFE5FF1F)
+private val Ink = Color(0xFF121211)
+private val Text = Color(0xFFF4F3EE)
+private val Muted = Color(0xFFB4B3AC)
 
 @Composable
 private fun WidgetBody(context: Context, content: WidgetContent) {
@@ -143,12 +144,12 @@ private fun WidgetBody(context: Context, content: WidgetContent) {
                 GlanceModifier
                     .fillMaxWidth()
                     .height(44.dp)
-                    .background(Lime)
+                    .background(Volt)
                     .cornerRadius(22.dp)
                     .clickable(actionStartActivity(target)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(label, style = TextStyle(color = ColorProvider(Ground), fontSize = 15.sp, fontWeight = FontWeight.Bold))
+                Text(label.uppercase(), style = TextStyle(color = ColorProvider(Ink), fontSize = 14.sp, fontWeight = FontWeight.Bold))
             }
         }
     }

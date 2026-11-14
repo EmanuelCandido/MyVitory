@@ -8,7 +8,7 @@ import { clock, DAYS, plural } from '../lib/format'
 import { createTemplate, deleteTemplate, move, newItem, updateTemplate } from '../sync/edits'
 import { LIMITS, type PlanSnapshot, type SnapshotItem, type SnapshotTemplate } from '../sync/types'
 import { ExercisePicker } from './ExercisePicker'
-import { CommitInput, Confirm, Modal, Stepper, Thumb } from './ui'
+import { CommitInput, Confirm, Modal, Stepper, Thumb, Ticket } from './ui'
 
 type Edit = (change: (p: PlanSnapshot) => PlanSnapshot) => void
 
@@ -59,7 +59,8 @@ export function TemplatesTab({ plan, edit }: { plan: PlanSnapshot; edit: Edit })
           ))}
         </div>
         <div className="row wrap">
-          <button className="btn primary" type="button" onClick={() => create('')}>
+          {/* Uma pílula volt por tela: com treinos, a principal é "Adicionar exercício" no editor. */}
+          <button className={`btn${entries.length === 0 ? ' primary' : ''}`} type="button" onClick={() => create('')}>
             + Novo treino
           </button>
           <button className="btn" type="button" onClick={() => setChoosingModel(true)}>
@@ -152,9 +153,7 @@ function TemplateEditor({ id, template, plan, edit, onDuplicate, onDelete }: {
   return (
     <section>
       <div className="editor-head">
-        <span className="code-badge" style={{ width: 44, height: 44, fontSize: 24 }}>
-          {template.code}
-        </span>
+        <span className="code-badge">{template.code}</span>
         <CommitInput
           className="input"
           aria-label="Nome do treino"
@@ -171,15 +170,11 @@ function TemplateEditor({ id, template, plan, edit, onDuplicate, onDelete }: {
       </div>
 
       <div className="summary">
-        <span>
-          <b>{template.items.length}</b> exercícios
-        </span>
-        <span>
-          <b>{totalSets(template)}</b> séries
-        </span>
-        <span>
-          <b>~{estimateMinutes(template)}</b> min
-        </span>
+        <div className="strip tilt">
+          <Ticket value={template.items.length} unit={template.items.length === 1 ? 'exercício' : 'exercícios'} tone="dim" />
+          <Ticket value={totalSets(template)} unit="séries" tone="dim" />
+          <Ticket value={`~${estimateMinutes(template)}`} unit="min" tone="dim" />
+        </div>
         <span>{primaryMuscles(plan, template).map(muscleLabel).join(' · ')}</span>
       </div>
 

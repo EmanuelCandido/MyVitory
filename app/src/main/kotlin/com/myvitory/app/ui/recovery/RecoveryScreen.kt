@@ -58,7 +58,7 @@ fun RecoveryScreen(contentPadding: PaddingValues) {
             .padding(bottom = 24.dp),
     ) {
         Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp)) {
-            Text("Recuperação", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+            Text("RECUPERAÇÃO", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
             Text("Agora, pelos seus treinos registrados", style = MaterialTheme.typography.bodyMedium, color = Palette.TextMuted)
         }
 
@@ -93,7 +93,7 @@ fun RecoveryScreen(contentPadding: PaddingValues) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        AppIcon(R.drawable.ic_check, null, tint = Palette.Lime, size = 14.dp)
+                        AppIcon(R.drawable.ic_check, null, tint = Palette.Volt, size = 14.dp)
                         Text(m.muscle.label, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
@@ -116,18 +116,18 @@ private fun TodayCheck(state: RecoveryUiState, modifier: Modifier = Modifier) {
     val today = state.today
     val notReady = state.todayNotReady
     val (title, body, color) = when {
-        today == null -> Triple("Hoje é descanso", "Os músculos agradecem.", Palette.Blue)
-        notReady.isEmpty() -> Triple("Treino de hoje liberado", "${today.session.name}: músculos principais prontos.", Palette.Lime)
+        today == null -> Triple("Hoje é descanso", "Os músculos agradecem.", Palette.Sky)
+        notReady.isEmpty() -> Triple("Treino de hoje liberado", "${today.session.name}: músculos principais prontos.", Palette.Volt)
         else -> Triple(
             "Atenção no treino de hoje",
             notReady.joinToString(", ") { "${it.muscle.label} em ${it.percent}%" } + ". Considere menos carga nesses exercícios.",
-            Palette.Orange,
+            Palette.Flame,
         )
     }
     Surface(shape = RoundedCornerShape(20.dp), color = Palette.Surface, modifier = modifier.fillMaxWidth()) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(Modifier.size(44.dp).clip(CircleShape).background(color), Alignment.Center) {
-                AppIcon(if (color == Palette.Orange) R.drawable.ic_timer else R.drawable.ic_check, null, tint = Palette.Ground, size = 22.dp)
+                AppIcon(if (color == Palette.Flame) R.drawable.ic_timer else R.drawable.ic_check, null, tint = Palette.Ground, size = 22.dp)
             }
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
@@ -146,7 +146,7 @@ private fun RecoveringRow(m: MuscleRecovery, nowMillis: Long) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
             Text(m.muscle.label, style = MaterialTheme.typography.titleMedium)
             if (last != null) Text("  · $last", style = MaterialTheme.typography.bodySmall, color = Palette.TextFaint, modifier = Modifier.weight(1f))
-            if (ready != null) Text("pronto $ready", style = MaterialTheme.typography.titleSmall, color = Palette.Blue)
+            if (ready != null) Text("pronto $ready", style = MaterialTheme.typography.titleSmall, color = Palette.Sky)
         }
         LinearProgressIndicator(
             progress = { m.percent / 100f },
@@ -154,7 +154,7 @@ private fun RecoveringRow(m: MuscleRecovery, nowMillis: Long) {
                 .fillMaxWidth()
                 .height(8.dp)
                 .semantics { contentDescription = "${m.muscle.label} ${m.percent}% recuperado" },
-            color = Palette.Blue,
+            color = Palette.Sky,
             trackColor = Palette.SurfaceHigh,
             gapSize = 0.dp,
             drawStopIndicator = {},

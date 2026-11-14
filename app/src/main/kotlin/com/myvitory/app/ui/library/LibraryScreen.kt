@@ -79,7 +79,7 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenExercise: (String) -> Uni
 
     Column(Modifier.fillMaxSize().padding(contentPadding)) {
         Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("Exercícios", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+            Text("EXERCÍCIOS", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
             OutlinedTextField(
                 value = state.query,
                 onValueChange = vm::setQuery,
@@ -95,9 +95,9 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenExercise: (String) -> Uni
                 keyboardActions = KeyboardActions(onSearch = { if (state.tab == 1) vm.searchVideos() }),
                 shape = CircleShape,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Palette.Lime,
+                    focusedBorderColor = Palette.Volt,
                     unfocusedBorderColor = Palette.LineStrong,
-                    cursorColor = Palette.Lime,
+                    cursorColor = Palette.Volt,
                     focusedContainerColor = Palette.Surface,
                     unfocusedContainerColor = Palette.Surface,
                 ),
@@ -123,10 +123,10 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenExercise: (String) -> Uni
             LazyColumn(contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp)) {
                 item(key = "new") {
                     TextButton(onClick = { creating = true }, modifier = Modifier.heightIn(min = 52.dp)) {
-                        AppIcon(R.drawable.ic_plus, null, tint = Palette.Lime, size = 18.dp)
+                        AppIcon(R.drawable.ic_plus, null, tint = Palette.Volt, size = 18.dp)
                         Text(
                             if (state.query.isBlank()) "  Novo exercício" else "  Criar “${state.query.trim()}”",
-                            color = Palette.Lime,
+                            color = Palette.Volt,
                             fontWeight = FontWeight.Bold,
                         )
                     }
@@ -150,8 +150,8 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenExercise: (String) -> Uni
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Palette.TextMuted,
                                 )
-                                if (item.inPlan) Text("NO SEU PLANO", style = MaterialTheme.typography.labelSmall, color = Palette.Lime)
-                                if (item.exercise.custom) Text("SEU", style = MaterialTheme.typography.labelSmall, color = Palette.Orange)
+                                if (item.inPlan) Text("NO SEU PLANO", style = MaterialTheme.typography.labelSmall, color = Palette.Volt)
+                                if (item.exercise.custom) Text("SEU", style = MaterialTheme.typography.labelSmall, color = Palette.Flame)
                             }
                         }
                         AppIcon(R.drawable.ic_chevron_right, null, tint = Palette.Neutral, size = 18.dp)
@@ -187,7 +187,7 @@ fun LibraryScreen(contentPadding: PaddingValues, onOpenExercise: (String) -> Uni
                             Text(video.channel, style = MaterialTheme.typography.bodySmall, color = Palette.TextMuted)
                         }
                         TextButton(onClick = { playing = null }, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text("Fechar", color = Palette.Lime, fontWeight = FontWeight.Bold)
+                            Text("Fechar", color = Palette.Volt, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -205,10 +205,10 @@ private fun VideoResults(state: LibraryUiState, onSearch: () -> Unit, onPlay: (C
                 !state.searchEnabled -> Note("Busca de vídeos desligada: falta a chave da YouTube API. Dentro de cada exercício dá para colar o link de um vídeo.")
                 state.query.isBlank() -> Note("Digite o nome do exercício e toque em buscar no teclado.")
                 state.query.trim() != search.query && !search.searching -> TextButton(onClick = onSearch, modifier = Modifier.heightIn(min = 48.dp)) {
-                    AppIcon(R.drawable.ic_search, null, tint = Palette.Lime, size = 18.dp)
-                    Text("  Buscar vídeos de “${state.query.trim()}”", color = Palette.Lime, fontWeight = FontWeight.Bold)
+                    AppIcon(R.drawable.ic_search, null, tint = Palette.Volt, size = 18.dp)
+                    Text("  Buscar vídeos de “${state.query.trim()}”", color = Palette.Volt, fontWeight = FontWeight.Bold)
                 }
-                search.searching -> Box(Modifier.fillMaxWidth().padding(24.dp), Alignment.Center) { CircularProgressIndicator(color = Palette.Lime) }
+                search.searching -> Box(Modifier.fillMaxWidth().padding(24.dp), Alignment.Center) { CircularProgressIndicator(color = Palette.Volt) }
                 search.error == VideoError.Offline && search.results.isEmpty() -> Note("Sem internet.")
                 search.error == VideoError.Quota && search.results.isEmpty() -> Note("Limite diário de buscas atingido. Tente amanhã.")
                 search.results.isEmpty() -> Note("Nenhum vídeo encontrado.")
@@ -278,6 +278,6 @@ private fun UnderlineTab(label: String, selected: Boolean, onClick: () -> Unit) 
             color = if (selected) Palette.Text else Palette.TextMuted,
             modifier = Modifier.padding(bottom = 10.dp),
         )
-        Box(Modifier.height(3.dp).fillMaxWidth().background(if (selected) Palette.Lime else Color.Transparent))
+        Box(Modifier.height(3.dp).fillMaxWidth().background(if (selected) Palette.Volt else Color.Transparent))
     }
 }

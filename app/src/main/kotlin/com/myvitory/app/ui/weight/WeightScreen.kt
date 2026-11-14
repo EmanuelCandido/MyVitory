@@ -116,12 +116,12 @@ fun WeightScreen(contentPadding: PaddingValues) {
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Palette.OrangeSoft)
+                    .background(Palette.FlameSoft)
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AppIcon(R.drawable.ic_scale, null, tint = Palette.Orange, size = 20.dp)
+                AppIcon(R.drawable.ic_scale, null, tint = Palette.Flame, size = 20.dp)
                 Text(
                     if (days == null) "Registre seu peso para ver a evolução e a previsão do mês. Uma pesagem por mês já basta."
                     else "Faz $days dias que você não se pesa. Pese pelo menos uma vez por mês.",
@@ -234,7 +234,7 @@ private fun GoalCard(progress: GoalProgress?, today: LocalDate, onEdit: () -> Un
         Row(verticalAlignment = Alignment.CenterVertically) {
             SectionLabel("Meta", Modifier.weight(1f))
             TextButton(onClick = onEdit, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(if (progress == null) "Definir" else "Editar", color = Palette.Lime, fontWeight = FontWeight.Bold)
+                Text(if (progress == null) "Definir" else "Editar", color = Palette.Volt, fontWeight = FontWeight.Bold)
             }
         }
         if (progress == null) {
@@ -245,10 +245,10 @@ private fun GoalCard(progress: GoalProgress?, today: LocalDate, onEdit: () -> Un
         Text(
             if (progress.reached) "${formatKg(goal.targetKg)} kg · alcançada!" else "${formatKg(goal.targetKg)} kg · faltam ${formatKg(progress.remainingKg.round1())} kg",
             style = MaterialTheme.typography.headlineSmall,
-            color = if (progress.reached) Palette.Lime else Palette.Text,
+            color = if (progress.reached) Palette.Volt else Palette.Text,
         )
         Box(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).background(Palette.SurfaceHigh)) {
-            Box(Modifier.fillMaxWidth(progress.fraction.toFloat()).height(8.dp).clip(CircleShape).background(Palette.Blue))
+            Box(Modifier.fillMaxWidth(progress.fraction.toFloat()).height(8.dp).clip(CircleShape).background(Palette.Sky))
         }
         Row {
             Text("${formatKg(goal.startKg)} kg no início", style = MaterialTheme.typography.bodySmall, color = Palette.TextFaint, modifier = Modifier.weight(1f))

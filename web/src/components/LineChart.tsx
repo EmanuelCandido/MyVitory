@@ -40,11 +40,11 @@ export function LineChart({ points, unit, height = 220, ariaLabel }: { points: P
             </text>
           </g>
         ))}
-        <polyline fill="none" stroke="var(--lime)" strokeWidth={2.5} strokeLinejoin="round" points={points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')} />
+        <polyline fill="none" stroke="var(--volt)" strokeWidth={2.5} strokeLinejoin="round" points={points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')} />
         {points.map((p, i) => (
           <g key={`${p.label}-${i}`} onMouseEnter={() => setHover(i)}>
             <rect x={x(i) - 12} y={pad.top} width={24} height={height - pad.top - pad.bottom} fill="transparent" />
-            <circle cx={x(i)} cy={y(p.value)} r={i === active ? 5.5 : 3} fill={i === active ? 'var(--lime)' : 'var(--surface-high)'} stroke="var(--lime)" strokeWidth={1.5} />
+            <circle cx={x(i)} cy={y(p.value)} r={i === active ? 5.5 : 3} fill={i === active ? 'var(--volt)' : 'var(--surface-high)'} stroke="var(--volt)" strokeWidth={1.5} />
             {(i % step === 0 || i === points.length - 1) && (
               <text x={x(i)} y={height - 8} textAnchor="middle">
                 {p.label}

@@ -95,18 +95,18 @@ fun UpdateCard(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            AppIcon(R.drawable.ic_refresh, null, tint = Palette.Lime, size = 20.dp)
+            AppIcon(R.drawable.ic_refresh, null, tint = Palette.Volt, size = 20.dp)
             Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
             action?.let {
                 TextButton(onClick = onAction, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text(it, color = Palette.Lime, fontWeight = FontWeight.Bold)
+                    Text(it, color = Palette.Volt, fontWeight = FontWeight.Bold)
                 }
             }
         }
         progress?.let {
             LinearProgressIndicator(
                 progress = { it },
-                color = Palette.Lime,
+                color = Palette.Volt,
                 trackColor = Palette.SurfaceHigh,
                 modifier = Modifier.fillMaxWidth().padding(end = 10.dp, bottom = 6.dp),
             )
@@ -139,6 +139,6 @@ fun UpdateSettingsRow() {
             onClick = { scope.launch { updater.check() } },
             enabled = state !is UpdateState.Checking && state !is UpdateState.Downloading && state !is UpdateState.Installing,
             modifier = Modifier.heightIn(min = 48.dp),
-        ) { Text("Procurar", color = Palette.Lime, fontWeight = FontWeight.Bold) }
+        ) { Text("Procurar", color = Palette.Volt, fontWeight = FontWeight.Bold) }
     }
 }

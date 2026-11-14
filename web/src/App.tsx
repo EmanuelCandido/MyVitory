@@ -41,8 +41,11 @@ function Signed({ user }: { user: User }) {
   return (
     <>
       <header className="topbar">
-        <a className="brand" href="#/" style={{ color: 'inherit', textDecoration: 'none' }}>
-          <span className="brand-mark" /> MyVitory <small>painel do treinador</small>
+        <a className="brand" href="#/">
+          <span className="brand-mark" aria-hidden="true">
+            MV
+          </span>
+          MyVitory <small>painel do treinador</small>
         </a>
         {athletes && athletes.length > 1 && (
           <select className="select" style={{ width: 'auto' }} value={athleteId ?? ''} onChange={(e) => open(e.target.value || null)} aria-label="Atleta">
@@ -55,7 +58,7 @@ function Signed({ user }: { user: User }) {
           </select>
         )}
         <span className="spacer" />
-        {usingEmulators && <span className="chip blue">emulador</span>}
+        {usingEmulators && <span className="chip sky">emulador</span>}
         <span className="user">
           {user.photoURL && <img src={user.photoURL} alt="" referrerPolicy="no-referrer" />}
           <span>{user.displayName ?? user.email}</span>

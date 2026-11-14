@@ -10,7 +10,10 @@ export function LoginPage() {
     <div className="center-page">
       <div className="hero">
         <span className="brand">
-          <span className="brand-mark" /> MyVitory <small>painel do treinador</small>
+          <span className="brand-mark" aria-hidden="true">
+            MV
+          </span>
+          MyVitory <small>painel do treinador</small>
         </span>
         <h1>Monte e acompanhe o treino pelo navegador.</h1>
         <p className="muted" style={{ margin: 0 }}>
@@ -31,7 +34,7 @@ export function LoginPage() {
         </button>
         {usingEmulators && (
           <>
-            <p className="notice blue small">Modo emulador: nada aqui vai para o Firebase de verdade.</p>
+            <p className="notice sky small">Modo emulador: nada aqui vai para o Firebase de verdade.</p>
             <button
               className="btn"
               type="button"
@@ -47,7 +50,7 @@ export function LoginPage() {
             </button>
           </>
         )}
-        {error && <p className="notice orange small">Não deu para entrar: {error}</p>}
+        {error && <p className="notice flame small">Não deu para entrar: {error}</p>}
       </div>
     </div>
   )
@@ -131,7 +134,7 @@ export function HomePage({ user, athletes, onOpen }: { user: User; athletes: Ath
             {busy ? 'Conectando…' : 'Conectar'}
           </button>
         </form>
-        {error && <p className="notice orange small">{error}</p>}
+        {error && <p className="notice flame small">{error}</p>}
       </section>
     </div>
   )

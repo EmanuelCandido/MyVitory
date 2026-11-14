@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Selo de alerta do Sistema Adesivo: triângulo laranja com contorno e "!" em tinta. Decorativo: o texto ao lado diz o que é. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp"
+    android:height="40dp"
+    android:viewportWidth="40"
+    android:viewportHeight="40">
+    <path
+        android:fillColor="#FF8A3D"
+        android:strokeColor="#121211"
+        android:strokeWidth="2.5"
+        android:strokeLineJoin="round"
+        android:pathData="M17.4,5.5a3,3 0,0 1,5.2 0l14,24.3a3,3 0,0 1,-2.6 4.5H6a3,3 0,0 1,-2.6 -4.5z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#121211"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M20,13v10" />
+    <path
+        android:fillColor="#121211"
+        android:pathData="M20,28.5m-2.4,0a2.4,2.4 0,1 1,4.8 0a2.4,2.4 0,1 1,-4.8 0" />
+</vector>

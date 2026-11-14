@@ -117,33 +117,33 @@ fun WeightChart(weights: List<Weighing>, forecast: WeightForecast?, goalKg: Doub
 
             goalKg?.let { goal ->
                 val gy = y(goal)
-                drawLine(Palette.Blue, Offset(left, gy), Offset(right, gy), strokeWidth = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
-                val label = measurer.measure("Meta ${formatKg(goal)}", axisStyle.copy(color = Palette.Blue))
+                drawLine(Palette.Sky, Offset(left, gy), Offset(right, gy), strokeWidth = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
+                val label = measurer.measure("Meta ${formatKg(goal)}", axisStyle.copy(color = Palette.Sky))
                 val ly = if (gy - label.size.height - 2.dp.toPx() > top) gy - label.size.height - 2.dp.toPx() else gy + 2.dp.toPx()
                 drawText(label, topLeft = Offset(left + 4.dp.toPx(), ly))
             }
 
             forecast?.takeIf { it.date > last.date }?.let { f ->
                 drawLine(
-                    Palette.Lime.copy(alpha = 0.7f), Offset(x(last.date), y(last.kg)), Offset(x(f.date), y(f.kg)),
+                    Palette.Volt.copy(alpha = 0.7f), Offset(x(last.date), y(last.kg)), Offset(x(f.date), y(f.kg)),
                     strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f)),
                 )
                 drawCircle(Palette.Ground, radius = 5.dp.toPx(), center = Offset(x(f.date), y(f.kg)))
-                drawCircle(Palette.Lime, radius = 3.dp.toPx(), center = Offset(x(f.date), y(f.kg)), style = Stroke(width = 1.5.dp.toPx()))
+                drawCircle(Palette.Volt, radius = 3.dp.toPx(), center = Offset(x(f.date), y(f.kg)), style = Stroke(width = 1.5.dp.toPx()))
             }
 
             if (points.size >= 2) {
                 val path = Path().apply {
                     points.forEachIndexed { i, p -> if (i == 0) moveTo(x(p.date), y(p.kg)) else lineTo(x(p.date), y(p.kg)) }
                 }
-                drawPath(path, Palette.Lime, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+                drawPath(path, Palette.Volt, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
             }
 
             val sx = x(points[selected].date)
             val sy = y(points[selected].kg)
             drawLine(Palette.LineStrong, Offset(sx, top), Offset(sx, bottom), strokeWidth = 1.dp.toPx())
             drawCircle(Palette.Ground, radius = 6.dp.toPx(), center = Offset(sx, sy))
-            drawCircle(Palette.Lime, radius = 4.dp.toPx(), center = Offset(sx, sy))
+            drawCircle(Palette.Volt, radius = 4.dp.toPx(), center = Offset(sx, sy))
 
             val value = measurer.measure("${formatKg(last.kg)} kg", labelStyle)
             val vx = (x(last.date) - value.size.width / 2).coerceIn(left, right - value.size.width)
@@ -151,9 +151,9 @@ fun WeightChart(weights: List<Weighing>, forecast: WeightForecast?, goalKg: Doub
             drawText(value, topLeft = Offset(vx, vy))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Legend("Pesagens", Palette.Lime, dashed = false)
-            if (forecast != null) Legend("Previsão", Palette.Lime, dashed = true)
-            if (goalKg != null) Legend("Meta", Palette.Blue, dashed = true)
+            Legend("Pesagens", Palette.Volt, dashed = false)
+            if (forecast != null) Legend("Previsão", Palette.Volt, dashed = true)
+            if (goalKg != null) Legend("Meta", Palette.Sky, dashed = true)
         }
     }
 }

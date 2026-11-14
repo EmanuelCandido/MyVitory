@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -43,6 +44,8 @@ import com.myvitory.app.ui.appViewModel
 import com.myvitory.app.ui.components.AppIcon
 import com.myvitory.app.ui.components.PillTabs
 import com.myvitory.app.ui.components.PrimaryButton
+import com.myvitory.app.ui.components.DecisionPlate
+import com.myvitory.app.ui.components.PaperButton
 import com.myvitory.app.ui.components.SecondaryButton
 import com.myvitory.app.ui.components.SectionLabel
 import com.myvitory.app.ui.components.Tag
@@ -60,13 +63,13 @@ fun ReplanScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Palette.Ground).statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) { AppIcon(R.drawable.ic_arrow_back, "Voltar") }
-            Text("Nova semana", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text("NOVA SEMANA", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
         }
 
         val data = state.data
         when {
             state.loading -> Column(Modifier.fillMaxWidth().padding(top = 80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator(color = Palette.Lime)
+                CircularProgressIndicator(color = Palette.Volt)
             }
             data == null -> Text(
                 "Nenhum treino perdido para reorganizar nesta semana.",
@@ -95,14 +98,13 @@ fun ReplanScreen(onBack: () -> Unit) {
                     }
                     state.explanation?.let { Changes(it, state.onlySkip) }
                 }
-                Row(
+                // A escolha da semana numa placa, como na referência: pular em branco, aplicar (recomendado) em Volt.
+                Box(
                     Modifier
                         .fillMaxWidth()
                         .background(Palette.Ground)
-                        .border(BorderStroke(1.dp, Palette.Surface))
                         .navigationBarsPadding()
-                        .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 12.dp),
                 ) {
                     val skip = {
                         vm.skip { revert ->
@@ -113,18 +115,22 @@ fun ReplanScreen(onBack: () -> Unit) {
                     if (state.onlySkip) {
                         PrimaryButton("Pular treino perdido", skip, Modifier.fillMaxWidth(), enabled = !state.busy)
                     } else {
-                        SecondaryButton("Pular", skip, Modifier.weight(1f).heightIn(min = 58.dp))
-                        PrimaryButton(
-                            "Aplicar",
-                            {
-                                vm.apply { revert ->
-                                    undo.show("Semana reorganizada", revert)
-                                    onBack()
-                                }
-                            },
-                            Modifier.weight(1.7f),
-                            enabled = !state.busy,
-                        )
+                        DecisionPlate {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                PaperButton("Pular", skip, Modifier.weight(1f).heightIn(min = 58.dp), enabled = !state.busy)
+                                PrimaryButton(
+                                    "Aplicar",
+                                    {
+                                        vm.apply { revert ->
+                                            undo.show("Semana reorganizada", revert)
+                                            onBack()
+                                        }
+                                    },
+                                    Modifier.weight(1.7f),
+                                    enabled = !state.busy,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -150,7 +156,7 @@ private fun Changes(explanation: Planner.Explanation, onlySkip: Boolean) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 SectionLabel("Fica de fora nesta semana")
                 droppedMissed.forEach { w ->
-                    Text(w.name, style = MaterialTheme.typography.titleMedium, color = Palette.Orange)
+                    Text(w.name, style = MaterialTheme.typography.titleMedium, color = Palette.Flame)
                 }
                 Text(
                     "Não cabe sem treinar músculo cansado. O próximo treino já considera isso.",
@@ -162,7 +168,7 @@ private fun Changes(explanation: Planner.Explanation, onlySkip: Boolean) {
     }
     explanation.nextRest?.let { next ->
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(horizontal = 4.dp)) {
-            AppIcon(R.drawable.ic_timer, null, tint = if (next.ok) Palette.Blue else Palette.Orange, size = 18.dp)
+            AppIcon(R.drawable.ic_timer, null, tint = if (next.ok) Palette.Sky else Palette.Flame, size = 18.dp)
             val day = next.training.date.dayOfWeek.short().lowercase()
             val text = when {
                 next.muscle == null -> "Próxima semana começa com ${next.training.name} ($day), sem conflito."
@@ -171,7 +177,7 @@ private fun Changes(explanation: Planner.Explanation, onlySkip: Boolean) {
             }
             Text(
                 buildAnnotatedString {
-                    withStyle(SpanStyle(color = if (next.ok) Palette.Blue else Palette.Orange, fontWeight = FontWeight.Bold)) {
+                    withStyle(SpanStyle(color = if (next.ok) Palette.Sky else Palette.Flame, fontWeight = FontWeight.Bold)) {
                         append(if (next.ok) "Próximo descanso ok: " else "")
                     }
                     append(text)
@@ -198,15 +204,20 @@ private fun ChangeCard(change: Planner.DayChange) {
                     color = Palette.TextFaint,
                     textDecoration = TextDecoration.LineThrough,
                 )
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        change.after?.name ?: "Descanso",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize * 1.1f),
-                        color = if (change.after == null) Palette.TextMuted else Palette.Text,
-                    )
-                    if (change.after?.mergedWith != null) Tag("FUNDIDO", background = Palette.Lime, content = Palette.Ground)
-                    else if (change.after?.missed == true) Tag("VEIO DE ${change.after.originalDate.dayOfWeek.short()}", background = Palette.Lime, content = Palette.Ground)
-                    if (change.usesRestDay) Tag("USA FOLGA", background = Palette.OrangeSoft, content = Palette.Orange)
+                // Antes riscado em cima, agora grande; a origem vai em etiquetas numa linha própria (não aperta o nome).
+                Text(
+                    (change.after?.name ?: "Descanso").uppercase(),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = if (change.after == null) Palette.TextMuted else Palette.Text,
+                )
+                val merged = change.after?.mergedWith != null
+                val cameFrom = change.after?.takeIf { it.missed }?.originalDate
+                if (merged || cameFrom != null || change.usesRestDay) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+                        if (merged) Tag("Fundido", background = Palette.Volt, content = Palette.Ink)
+                        else if (cameFrom != null) Tag("Veio de ${cameFrom.dayOfWeek.short()}", background = Palette.Volt, content = Palette.Ink)
+                        if (change.usesRestDay) Tag("Usa folga", background = Palette.FlameSoft, content = Palette.Flame)
+                    }
                 }
                 Text(
                     reasonText(change),

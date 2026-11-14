@@ -41,6 +41,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.myvitory.app.data.db.TemplateItemRow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.myvitory.app.R
 import com.myvitory.app.data.DayView
@@ -50,6 +52,12 @@ import com.myvitory.app.domain.SessionStatus
 import com.myvitory.app.ui.LocalUndo
 import com.myvitory.app.ui.appViewModel
 import com.myvitory.app.ui.components.AppIcon
+import com.myvitory.app.ui.components.DecisionPlate
+import com.myvitory.app.ui.components.PaperButton
+import com.myvitory.app.ui.components.Ticket
+import com.myvitory.app.ui.components.TicketStrip
+import com.myvitory.app.ui.components.TicketTone
+import com.myvitory.app.ui.components.WarningBadge
 import com.myvitory.app.ui.components.MarkSessionSheet
 import com.myvitory.app.ui.components.PrimaryButton
 import com.myvitory.app.ui.components.SecondaryButton
@@ -105,16 +113,22 @@ fun TodayScreen(
             .padding(bottom = 24.dp),
     ) {
         Row(Modifier.padding(start = 20.dp, end = 12.dp, top = 22.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            // Data e progresso como rótulo e etiqueta: o nome do treino, logo abaixo, é o único título grande da tela.
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(state.today.headerLabel(), style = MaterialTheme.typography.labelSmall, color = Palette.TextMuted)
-                Text(
-                    if (state.plannedCount == 0) "Semana livre" else "${state.doneCount} de ${state.plannedCount} treinos na semana",
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.semantics { heading() },
-                )
+                if (state.plannedCount == 0) {
+                    Ticket("Semana livre", tone = TicketTone.Dim)
+                } else {
+                    Ticket(
+                        "${state.doneCount}/${state.plannedCount}",
+                        unit = "treinos na semana",
+                        tone = if (state.doneCount == state.plannedCount) TicketTone.Volt else TicketTone.Dim,
+                        description = "${state.doneCount} de ${state.plannedCount} treinos na semana",
+                    )
+                }
             }
             IconButton(onClick = onOpenSettings, modifier = Modifier.size(48.dp)) {
-                Box(Modifier.size(44.dp).border(1.dp, Palette.Line, CircleShape), Alignment.Center) {
+                Box(Modifier.size(44.dp).border(2.dp, Palette.Line, CircleShape), Alignment.Center) {
                     AppIcon(R.drawable.ic_settings, "Ajustes e lembretes", size = 20.dp)
                 }
             }
@@ -206,14 +220,14 @@ private fun WeekStrip(days: List<DayView>, today: LocalDate, onOpenWeek: () -> U
                 Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(14.dp))
-                    .then(if (isToday) Modifier.background(Palette.Surface).border(1.5.dp, Palette.Lime, RoundedCornerShape(14.dp)) else Modifier)
+                    .then(if (isToday) Modifier.background(Palette.Surface).border(2.dp, Palette.Volt, RoundedCornerShape(14.dp)) else Modifier)
                     .clickable(onClick = onOpenWeek)
                     .semantics(mergeDescendants = true) { contentDescription = description }
                     .padding(top = 8.dp, bottom = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(day.date.dayOfWeek.letter(), style = MaterialTheme.typography.labelMedium, color = if (isToday) Palette.Lime else Palette.TextMuted)
+                Text(day.date.dayOfWeek.letter(), style = MaterialTheme.typography.labelMedium, color = if (isToday) Palette.Volt else Palette.TextMuted)
                 Text(
                     day.date.dayOfMonth.twoDigits(),
                     style = MaterialTheme.typography.headlineSmall.copy(fontSize = MaterialTheme.typography.titleLarge.fontSize),
@@ -225,21 +239,24 @@ private fun WeekStrip(days: List<DayView>, today: LocalDate, onOpenWeek: () -> U
     }
 }
 
+/** Pendência: selo de alerta (ou ícone), frase curta e o verbo numa pílula Flame. Só uma acima do treino por vez. */
 @Composable
-private fun Banner(text: String, action: String, onAction: () -> Unit, modifier: Modifier = Modifier, @DrawableRes icon: Int = R.drawable.ic_timer) {
+private fun Banner(text: String, action: String, onAction: () -> Unit, modifier: Modifier = Modifier, @DrawableRes icon: Int? = null) {
     Row(
         modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(Palette.OrangeSoft)
-            .padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+            .clip(RoundedCornerShape(20.dp))
+            .background(Palette.FlameSoft)
+            .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        AppIcon(icon, null, tint = Palette.Orange, size = 20.dp)
+        if (icon == null) WarningBadge(size = 26.dp) else AppIcon(icon, null, tint = Palette.Flame, size = 22.dp)
         Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        TextButton(onClick = onAction, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(action, color = Palette.Orange, fontWeight = FontWeight.Bold)
+        Surface(onClick = onAction, shape = CircleShape, color = Palette.Flame, contentColor = Palette.Ink, modifier = Modifier.heightIn(min = 44.dp)) {
+            Box(Modifier.padding(horizontal = 14.dp), Alignment.Center) {
+                Text(action.uppercase(), style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.5.sp))
+            }
         }
     }
 }
@@ -247,9 +264,10 @@ private fun Banner(text: String, action: String, onAction: () -> Unit, modifier:
 @Composable
 private fun CardShell(content: @Composable () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(26.dp),
         color = Palette.Surface,
-        border = BorderStroke(1.dp, Palette.SurfaceHigh),
+        contentColor = Palette.Text,
+        border = BorderStroke(1.dp, Palette.Line),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 20.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -269,35 +287,59 @@ private fun TodayCard(
 ) {
     val session = day.session ?: return
     val started = session.startedAt != null
-    CardShell {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            val movedFrom = state.movedFrom
-            if (movedFrom != null) {
-                Text("VEIO DE ${movedFrom.dayOfWeek.long().uppercase()}", style = MaterialTheme.typography.labelSmall, color = Palette.Orange)
-            } else {
-                SectionLabel("Treino de hoje")
+    val sets = state.preview.sumOf { it.sets }
+    val minutes = estimateMinutes(state.preview)
+    Box {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = Palette.Surface,
+            contentColor = Palette.Text,
+            border = BorderStroke(2.dp, Palette.Volt),
+            modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+        ) {
+            Column(Modifier.padding(start = 6.dp, end = 6.dp, top = 30.dp, bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val movedFrom = state.movedFrom
+                    if (movedFrom != null) {
+                        SectionLabel("Veio de ${movedFrom.dayOfWeek.long()}", color = Palette.Flame)
+                    } else {
+                        SectionLabel("Treino de hoje")
+                    }
+                    Text(session.name.uppercase(), style = MaterialTheme.typography.displaySmall, modifier = Modifier.semantics { heading() })
+                    if (session.mergedTemplateId != null) {
+                        Text("Dois treinos em um, uma série a menos em cada.", style = MaterialTheme.typography.bodySmall, color = Palette.TextMuted)
+                    }
+                }
+                if (state.preview.isNotEmpty()) {
+                    Column(Modifier.padding(horizontal = 12.dp)) {
+                        HorizontalDivider(color = Palette.Line)
+                        SessionExerciseList(state.preview, onOpenExercise)
+                        Text("Toque em um exercício para ver o movimento e o vídeo.", style = MaterialTheme.typography.bodySmall, color = Palette.TextFaint, modifier = Modifier.padding(top = 6.dp))
+                    }
+                }
+                // A pergunta do dia numa placa só: as alternativas em branco, a recomendada em Volt, por último.
+                DecisionPlate {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        PaperButton("Já treinei", onAlreadyDone, Modifier.weight(1f))
+                        PaperButton("Hoje não vai dar", onSkip, Modifier.weight(1f))
+                    }
+                    PrimaryButton(if (started) "Continuar treino" else "Começar treino", onStart, Modifier.fillMaxWidth(), icon = R.drawable.ic_play)
+                }
             }
-            Text(session.name, style = MaterialTheme.typography.displaySmall)
-            Text(
-                if (session.mergedTemplateId != null) "${day.exerciseCount} exercícios · dois treinos em um, uma série a menos em cada"
-                else "${day.exerciseCount} exercícios",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Palette.TextMuted,
-            )
         }
-        if (state.preview.isNotEmpty()) {
-            Column {
-                HorizontalDivider(color = Palette.Line)
-                SessionExerciseList(state.preview, onOpenExercise)
-                Text("Toque em um exercício para ver o movimento e o vídeo.", style = MaterialTheme.typography.bodySmall, color = Palette.TextMuted, modifier = Modifier.padding(top = 6.dp))
-            }
-        }
-        PrimaryButton(if (started) "Continuar treino" else "Começar treino", onStart, Modifier.fillMaxWidth(), icon = R.drawable.ic_play)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SecondaryButton("Já treinei", onAlreadyDone, Modifier.weight(1f))
-            SecondaryButton("Hoje não vai dar", onSkip, Modifier.weight(1f))
+        // Número antes do rótulo, como o contador da referência: sai da borda de cima do card.
+        TicketStrip(Modifier.padding(start = 18.dp)) {
+            Ticket("${day.exerciseCount}", unit = "exercícios", description = "${day.exerciseCount} exercícios")
+            if (sets > 0) Ticket("$sets", unit = "séries", description = "$sets séries")
+            if (minutes > 0) Ticket("~$minutes", unit = "min", description = "cerca de $minutes minutos")
         }
     }
+}
+
+/** Mesma conta do painel (web/src/lib/analysis.ts): 3 s por repetição mais o descanso entre as séries. */
+private fun estimateMinutes(items: List<TemplateItemRow>): Int {
+    val seconds = items.sumOf { it.sets * it.reps * 3 + (it.sets - 1).coerceAtLeast(0) * it.restSec }
+    return Math.round(seconds / 60.0).toInt()
 }
 
 @Composable
@@ -307,7 +349,7 @@ private fun DoneCard(session: SessionEntity, next: DayView?, onOpen: () -> Unit)
             StatusMark(if (session.status == SessionStatus.DONE) DayState.DONE else DayState.PARTIAL, size = 44.dp)
             Column {
                 SectionLabel(if (session.status == SessionStatus.DONE) "Treino concluído" else "Treino parcial")
-                Text(session.name, style = MaterialTheme.typography.headlineMedium)
+                Text(session.name.uppercase(), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
             }
         }
         NextLine(next)
@@ -320,7 +362,7 @@ private fun MissedCard(session: SessionEntity, canReplan: Boolean, onReplan: () 
     CardShell {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             SectionLabel("Hoje sem treino")
-            Text(session.name, style = MaterialTheme.typography.headlineMedium)
+            Text(session.name.uppercase(), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
             Text(
                 when {
                     canReplan -> "Marcado como não feito. Dá para encaixar no resto da semana."
@@ -331,8 +373,14 @@ private fun MissedCard(session: SessionEntity, canReplan: Boolean, onReplan: () 
                 color = Palette.TextMuted,
             )
         }
-        if (canReplan) PrimaryButton("Reorganizar semana", onReplan, Modifier.fillMaxWidth())
-        SecondaryButton("Vou treinar sim", onTrainAnyway, Modifier.fillMaxWidth())
+        if (canReplan) {
+            DecisionPlate {
+                PaperButton("Vou treinar sim", onTrainAnyway, Modifier.fillMaxWidth())
+                PrimaryButton("Reorganizar semana", onReplan, Modifier.fillMaxWidth())
+            }
+        } else {
+            SecondaryButton("Vou treinar sim", onTrainAnyway, Modifier.fillMaxWidth())
+        }
     }
 }
 
@@ -341,11 +389,11 @@ private fun RestCard(next: DayView?) {
     CardShell {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(Modifier.size(44.dp).clip(CircleShape).background(Palette.SurfaceHigh), Alignment.Center) {
-                Box(Modifier.size(width = 18.dp, height = 3.dp).background(Palette.Blue, CircleShape))
+                Box(Modifier.size(width = 18.dp, height = 3.dp).background(Palette.Sky, CircleShape))
             }
             Column {
                 SectionLabel("Hoje")
-                Text("Dia de descanso", style = MaterialTheme.typography.headlineMedium)
+                Text("DIA DE DESCANSO", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
             }
         }
         Text("O músculo cresce na recuperação. Aproveite.", style = MaterialTheme.typography.bodyMedium, color = Palette.TextMuted)

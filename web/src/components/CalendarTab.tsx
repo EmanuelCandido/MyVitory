@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { addDays, DAYS_SHORT, dayLabel, dayOfWeek, isoDay, parseDay, shortDate, weekStart } from '../lib/format'
 import { dateChoice, setDate, type DateChoice } from '../sync/edits'
 import { LIMITS, type DayDoc, type PlanSnapshot } from '../sync/types'
-import { CommitInput, Menu, MenuItem } from './ui'
+import { CommitInput, Menu, MenuItem, Ticket } from './ui'
 import { statusChip } from './WeekTab'
 
 type Edit = (change: (p: PlanSnapshot) => PlanSnapshot) => void
@@ -35,10 +35,10 @@ export function CalendarTab({ plan, days, edit }: { plan: PlanSnapshot; days: Da
 
       <div className="legend small muted">
         <span>
-          <i className="dot lime" /> Só nesta data
+          <i className="dot volt" /> Só nesta data
         </span>
         <span>
-          <i className="dot blue" /> Mudado pelo celular
+          <i className="dot sky" /> Mudado pelo celular
         </span>
         <span>
           <i className="dot stripes" /> Academia fechada
@@ -113,7 +113,7 @@ interface Effective {
   title: string
   code?: string
   origin: string
-  tone: '' | 'lime' | 'blue'
+  tone: '' | 'volt' | 'sky'
 }
 
 function effective(plan: PlanSnapshot, date: string, real: DayDoc | undefined): Effective {
@@ -131,7 +131,7 @@ function effective(plan: PlanSnapshot, date: string, real: DayDoc | undefined): 
       kind: 'closed',
       title: choice.label || 'Feriado',
       origin: 'Academia fechada só nesta data',
-      tone: 'lime',
+      tone: 'volt',
     }
 
   const baseId = plan.week[String(weekday)]?.templateId ?? null
@@ -144,7 +144,7 @@ function effective(plan: PlanSnapshot, date: string, real: DayDoc | undefined): 
   if (choice.kind === 'template') {
     // Escolhido no painel e o celular ainda não pegou: mostra a escolha e avisa.
     const pending = real && real.status !== 'DONE' && real.status !== 'PARTIAL' && (real.templateId ?? null) !== choice.templateId
-    return workout(choice.templateId, pending ? 'Só nesta data · aguardando o celular' : 'Só nesta data', 'lime')
+    return workout(choice.templateId, pending ? 'Só nesta data · aguardando o celular' : 'Só nesta data', 'volt')
   }
   if (real) {
     // Nesta semana vale o que está no celular (o recálculo pode ter mudado o dia).
@@ -155,14 +155,14 @@ function effective(plan: PlanSnapshot, date: string, real: DayDoc | undefined): 
         kind: 'rest',
         title: 'Descanso',
         origin,
-        tone: changed ? 'blue' : '',
+        tone: changed ? 'sky' : '',
       }
     return {
       kind: 'workout',
       title: real.name,
       code: real.templateId ? plan.templates[real.templateId]?.code : undefined,
       origin,
-      tone: changed ? 'blue' : '',
+      tone: changed ? 'sky' : '',
     }
   }
   return workout(baseId, 'Plano base', '')
@@ -204,9 +204,14 @@ function DateCell({
         .join(' ')}
       aria-label={dayLabel(day)}
     >
+      {isToday && (
+        <span className="day-tag">
+          <Ticket value="Hoje" tone="volt" small />
+        </span>
+      )}
       <div className="day-head">
         <span className="day-name">{long ? dayLabel(day) : DAYS_SHORT[weekday - 1]}</span>
-        {isToday ? <span className="chip lime">Hoje</span> : !long && <span className="small faint">{shortDate(day)}</span>}
+        {!long && <span className="small faint">{shortDate(day)}</span>}
       </div>
 
       <div className="day-main">

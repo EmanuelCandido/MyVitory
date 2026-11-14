@@ -81,7 +81,7 @@ object Notifications {
     fun base(context: Context, channel: String): NotificationCompat.Builder =
         NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
-            .setColor(ContextCompat.getColor(context, R.color.lime))
+            .setColor(ContextCompat.getColor(context, R.color.volt))
 
     /** Abre o app; com [open] e [sessionId], leva direto ao lugar certo. */
     fun openApp(context: Context, requestCode: Int, open: String = OPEN_TODAY, sessionId: Long? = null): PendingIntent {

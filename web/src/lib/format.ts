@@ -50,4 +50,13 @@ export function relative(date: Date, now = new Date()): string {
   return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')} às ${time}`
 }
 
-export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+/** "hoje", "ontem", "há 3 dias", "31 out" (a partir de duas semanas). */
+export function daysAgo(iso: string, now = new Date()): string {
+  const diff = Math.round((parseDay(isoDay(now)).getTime() - parseDay(iso).getTime()) / 86_400_000)
+  if (diff <= 0) return 'hoje'
+  if (diff === 1) return 'ontem'
+  if (diff < 14) return `há ${diff} dias`
+  return shortDate(parseDay(iso))
+}
+
+export const plural =(n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`

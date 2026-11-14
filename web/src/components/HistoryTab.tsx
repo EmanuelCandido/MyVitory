@@ -42,7 +42,7 @@ export function HistoryTab({ days }: { days: DayDoc[] | undefined }) {
           <b>{stats.plannedLast28 ? Math.round((stats.doneLast28 / stats.plannedLast28) * 100) : 0}%</b>
           <span>de frequência</span>
         </div>
-        <div className="stat">
+        <div className={`stat${stats.missedLast28 > 0 ? ' flame' : ''}`}>
           <b>{stats.missedLast28}</b>
           <span>{stats.missedLast28 === 1 ? 'treino não feito' : 'treinos não feitos'}</span>
         </div>

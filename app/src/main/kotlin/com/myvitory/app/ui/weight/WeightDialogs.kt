@@ -78,23 +78,23 @@ fun WeighingDialog(
                         { Text("Entre ${WeightLogic.MIN_KG.toInt()} e ${WeightLogic.MAX_KG.toInt()} kg") }
                     } else null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Palette.Lime, cursorColor = Palette.Lime, focusedLabelColor = Palette.Lime),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Palette.Volt, cursorColor = Palette.Volt, focusedLabelColor = Palette.Volt),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 DateRow("Data", date.longLabel(today), onClick = { pickingDate = true })
                 if (replaces != null) {
-                    Text("Já tem ${formatKg(replaces)} kg nesse dia. Salvar substitui.", style = MaterialTheme.typography.bodySmall, color = Palette.Orange)
+                    Text("Já tem ${formatKg(replaces)} kg nesse dia. Salvar substitui.", style = MaterialTheme.typography.bodySmall, color = Palette.Flame)
                 }
                 if (onDelete != null) {
                     TextButton(onClick = onDelete, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text("Apagar pesagem", color = Palette.Orange, fontWeight = FontWeight.Bold)
+                        Text("Apagar pesagem", color = Palette.Flame, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = { kg?.let { onSave(date, it) } }, enabled = kg != null) {
-                Text("Salvar", color = if (kg != null) Palette.Lime else Palette.TextFaint, fontWeight = FontWeight.Bold)
+                Text("Salvar", color = if (kg != null) Palette.Volt else Palette.TextFaint, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = Palette.TextMuted) } },
@@ -135,7 +135,7 @@ fun GoalDialog(
                     singleLine = true,
                     isError = text.isNotEmpty() && kg == null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Palette.Lime, cursorColor = Palette.Lime, focusedLabelColor = Palette.Lime),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Palette.Volt, cursorColor = Palette.Volt, focusedLabelColor = Palette.Volt),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 DateRow("Prazo", by?.longLabel(today) ?: "Sem prazo", onClick = { pickingDate = true })
@@ -144,14 +144,14 @@ fun GoalDialog(
                 }
                 if (onRemove != null) {
                     TextButton(onClick = onRemove, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text("Apagar meta", color = Palette.Orange, fontWeight = FontWeight.Bold)
+                        Text("Apagar meta", color = Palette.Flame, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = { kg?.let { onSave(it, by) } }, enabled = valid) {
-                Text("Salvar", color = if (valid) Palette.Lime else Palette.TextFaint, fontWeight = FontWeight.Bold)
+                Text("Salvar", color = if (valid) Palette.Volt else Palette.TextFaint, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = Palette.TextMuted) } },
@@ -167,7 +167,7 @@ private fun DateRow(label: String, value: String, onClick: () -> Unit) {
     Surface(onClick = onClick, color = Palette.SurfaceHigh, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
         Row(Modifier.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.bodyMedium, color = Palette.TextMuted, modifier = Modifier.weight(1f))
-            Text(value, style = MaterialTheme.typography.titleMedium, color = Palette.Lime)
+            Text(value, style = MaterialTheme.typography.titleMedium, color = Palette.Volt)
         }
     }
 }
@@ -186,11 +186,11 @@ private fun PickDate(initial: LocalDate, allow: (LocalDate) -> Boolean, onDismis
     )
     val colors = DatePickerDefaults.colors(
         containerColor = Palette.Surface,
-        selectedDayContainerColor = Palette.Lime,
+        selectedDayContainerColor = Palette.Volt,
         selectedDayContentColor = Palette.Ground,
-        todayDateBorderColor = Palette.Lime,
-        todayContentColor = Palette.Lime,
-        selectedYearContainerColor = Palette.Lime,
+        todayDateBorderColor = Palette.Volt,
+        todayContentColor = Palette.Volt,
+        selectedYearContainerColor = Palette.Volt,
         selectedYearContentColor = Palette.Ground,
     )
     DatePickerDialog(
@@ -198,7 +198,7 @@ private fun PickDate(initial: LocalDate, allow: (LocalDate) -> Boolean, onDismis
         colors = colors,
         confirmButton = {
             TextButton(onClick = { state.selectedDateMillis?.let { onPick(it.date()) } }) {
-                Text("OK", color = Palette.Lime, fontWeight = FontWeight.Bold)
+                Text("OK", color = Palette.Volt, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = Palette.TextMuted) } },

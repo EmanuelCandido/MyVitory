@@ -58,7 +58,7 @@ import com.myvitory.app.ui.appViewModel
 import com.myvitory.app.ui.components.AppIcon
 import com.myvitory.app.ui.components.SectionLabel
 import com.myvitory.app.ui.components.twoDigits
-import com.myvitory.app.ui.theme.BarlowCondensed
+import com.myvitory.app.ui.theme.Mono
 import com.myvitory.app.ui.theme.Palette
 import java.time.Instant
 import java.time.LocalDate
@@ -74,7 +74,7 @@ fun CoachScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Palette.Ground).statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) { AppIcon(R.drawable.ic_arrow_back, "Voltar") }
-            Text("Painel do treinador", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text("PAINEL DO TREINADOR", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
         }
 
         Column(
@@ -82,10 +82,10 @@ fun CoachScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             state.error?.let { message ->
-                Surface(shape = RoundedCornerShape(16.dp), color = Palette.OrangeSoft, modifier = Modifier.fillMaxWidth()) {
+                Surface(shape = RoundedCornerShape(16.dp), color = Palette.FlameSoft, modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                        TextButton(onClick = vm::dismissError) { Text("OK", color = Palette.Orange) }
+                        TextButton(onClick = vm::dismissError) { Text("OK", color = Palette.Flame) }
                     }
                 }
             }
@@ -108,7 +108,7 @@ fun CoachScreen(onBack: () -> Unit) {
                 )
             },
             confirmButton = {
-                TextButton(onClick = { confirmDisconnect = false; vm.disconnect() }) { Text("Desconectar e apagar", color = Palette.Orange) }
+                TextButton(onClick = { confirmDisconnect = false; vm.disconnect() }) { Text("Desconectar e apagar", color = Palette.Flame) }
             },
             dismissButton = { TextButton(onClick = { confirmDisconnect = false }) { Text("Cancelar") } },
             containerColor = Palette.SurfaceHigh,
@@ -135,17 +135,17 @@ private fun Disconnected(busy: Boolean, onConnect: (String) -> Unit) {
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Palette.Lime,
+                    focusedBorderColor = Palette.Volt,
                     unfocusedBorderColor = Palette.LineStrong,
-                    focusedLabelColor = Palette.Lime,
-                    cursorColor = Palette.Lime,
+                    focusedLabelColor = Palette.Volt,
+                    cursorColor = Palette.Volt,
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(
                 onClick = { onConnect(name) },
                 enabled = !busy && name.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = Palette.Lime, contentColor = Palette.Ground),
+                colors = ButtonDefaults.buttonColors(containerColor = Palette.Volt, contentColor = Palette.Ground),
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             ) { Text(if (busy) "Conectando..." else "Conectar", fontWeight = FontWeight.Bold) }
         }
@@ -171,8 +171,8 @@ private fun Connected(state: CoachUiState, vm: CoachViewModel, onDisconnect: () 
                 val formatted = CoachLink.formatCode(code)
                 Text(
                     formatted,
-                    style = MaterialTheme.typography.displaySmall.copy(fontFamily = BarlowCondensed, fontWeight = FontWeight.Bold, letterSpacing = 4.sp),
-                    color = Palette.Lime,
+                    style = MaterialTheme.typography.displaySmall.copy(fontFamily = Mono, fontWeight = FontWeight.Bold, letterSpacing = 4.sp),
+                    color = Palette.Volt,
                     modifier = Modifier.semantics { contentDescription = "Código ${code.toList().joinToString(" ")}" },
                 )
                 Text("Vale até ${clock(sync.pairCodeExpiresAt!!)}.", style = MaterialTheme.typography.bodySmall, color = Palette.TextMuted)
@@ -183,7 +183,7 @@ private fun Connected(state: CoachUiState, vm: CoachViewModel, onDisconnect: () 
                 color = Palette.TextMuted,
             )
             TextButton(onClick = vm::newCode, enabled = !state.busy, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(if (code == null) "Gerar código" else "Gerar outro código", color = Palette.Lime, fontWeight = FontWeight.Bold)
+                Text(if (code == null) "Gerar código" else "Gerar outro código", color = Palette.Volt, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -207,7 +207,7 @@ private fun Connected(state: CoachUiState, vm: CoachViewModel, onDisconnect: () 
                     if (coach.email.isNotBlank()) Text(coach.email, style = MaterialTheme.typography.bodySmall, color = Palette.TextMuted)
                 }
                 TextButton(onClick = { vm.removeCoach(coach.uid) }, enabled = !state.busy, modifier = Modifier.heightIn(min = 48.dp)) {
-                    Text("Remover", color = Palette.Orange)
+                    Text("Remover", color = Palette.Flame)
                 }
             }
         }
@@ -225,9 +225,9 @@ private fun Connected(state: CoachUiState, vm: CoachViewModel, onDisconnect: () 
                 style = MaterialTheme.typography.bodySmall,
                 color = Palette.TextMuted,
             )
-            sync.lastError?.let { Text("Último erro: $it", style = MaterialTheme.typography.bodySmall, color = Palette.Orange) }
+            sync.lastError?.let { Text("Último erro: $it", style = MaterialTheme.typography.bodySmall, color = Palette.Flame) }
             TextButton(onClick = vm::syncNow, enabled = !state.busy, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(if (state.busy) "Sincronizando..." else "Sincronizar agora", color = Palette.Lime, fontWeight = FontWeight.Bold)
+                Text(if (state.busy) "Sincronizando..." else "Sincronizar agora", color = Palette.Volt, fontWeight = FontWeight.Bold)
             }
         }
         HorizontalDivider(color = Palette.SurfaceHigh)
@@ -247,7 +247,7 @@ private fun Connected(state: CoachUiState, vm: CoachViewModel, onDisconnect: () 
                 checked = sync.shareWeight,
                 onCheckedChange = null,
                 colors = SwitchDefaults.colors(
-                    checkedTrackColor = Palette.Lime,
+                    checkedTrackColor = Palette.Volt,
                     checkedThumbColor = Palette.Ground,
                     uncheckedTrackColor = Palette.SurfaceHigh,
                     uncheckedThumbColor = Palette.TextMuted,
@@ -258,7 +258,7 @@ private fun Connected(state: CoachUiState, vm: CoachViewModel, onDisconnect: () 
     }
 
     TextButton(onClick = onDisconnect, enabled = !state.busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(top = 8.dp)) {
-        Text("Desconectar e apagar da nuvem", color = Palette.Orange)
+        Text("Desconectar e apagar da nuvem", color = Palette.Flame)
     }
 }
 

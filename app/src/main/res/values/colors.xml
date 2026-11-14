@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ground">#0E0F10</color>
-    <color name="lime">#CDF24B</color>
+    <!-- Mesmos valores de Palette (ui/theme/Theme.kt): splash, ícone e cor da notificação. -->
+    <color name="ground">#1A1A18</color>
+    <color name="volt">#E5FF1F</color>
 </resources>

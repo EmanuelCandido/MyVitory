@@ -67,7 +67,7 @@ fun ExerciseEditorDialog(
                     onValueChange = { name = it.take(60) },
                     label = { Text("Nome") },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Palette.Lime, cursorColor = Palette.Lime, focusedLabelColor = Palette.Lime),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Palette.Volt, cursorColor = Palette.Volt, focusedLabelColor = Palette.Volt),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 SectionLabel("Equipamento")
@@ -102,7 +102,7 @@ fun ExerciseEditorDialog(
                 onClick = {
                     onSave(ExerciseDraft(name.trim(), equipment, Muscle.entries.filter { it in primary }, Muscle.entries.filter { it in secondary }))
                 },
-            ) { Text("Salvar", color = if (valid) Palette.Lime else Palette.TextMuted, fontWeight = FontWeight.Bold) }
+            ) { Text("Salvar", color = if (valid) Palette.Volt else Palette.TextMuted, fontWeight = FontWeight.Bold) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = Palette.TextMuted) } },
     )
@@ -113,7 +113,7 @@ private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = CircleShape,
-        color = if (selected) Palette.Lime else Color.Transparent,
+        color = if (selected) Palette.Volt else Color.Transparent,
         border = if (selected) null else BorderStroke(1.dp, Palette.LineStrong),
         modifier = Modifier.heightIn(min = 36.dp).semantics { this.selected = selected },
     ) {

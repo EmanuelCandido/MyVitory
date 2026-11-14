@@ -1,6 +1,39 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Exercise } from '../lib/catalog'
 
+export type Tone = 'flame' | 'volt' | 'paper' | 'sky' | 'dim'
+
+/** Etiqueta chanfrada: número grande e unidade pequena ("05 EXERC"). Só mostra dado, nunca recebe clique. */
+export function Ticket({ value, unit, tone = 'flame', small, title }: { value: ReactNode; unit?: string; tone?: Tone; small?: boolean; title?: string }) {
+  return (
+    <span className={`ticket${tone === 'flame' ? '' : ` ${tone}`}${small ? ' sm' : ''}`} title={title}>
+      {value}
+      {unit && <small>{unit}</small>}
+    </span>
+  )
+}
+
+/** Selo de alerta (triângulo laranja). Decorativo: o texto ao lado diz o que é. */
+export function WarnBadge({ size = 18 }: { size?: number }) {
+  return (
+    <svg className="badge" width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">
+      <path d="M17.4 5.5a3 3 0 0 1 5.2 0l14 24.3a3 3 0 0 1-2.6 4.5H6a3 3 0 0 1-2.6-4.5z" fill="var(--flame)" stroke="var(--ink)" strokeWidth="2.5" strokeLinejoin="round" />
+      <path d="M20 13v10" stroke="var(--ink)" strokeWidth="4" strokeLinecap="round" />
+      <circle cx="20" cy="28.5" r="2.4" fill="var(--ink)" />
+    </svg>
+  )
+}
+
+/** Aviso com selo: "⚠ Quadríceps: 24 h desde o treino anterior". */
+export function Warn({ children }: { children: ReactNode }) {
+  return (
+    <span className="warn">
+      <WarnBadge />
+      <span>{children}</span>
+    </span>
+  )
+}
+
 export function Stepper({ label, value, display, onChange, step = 1, min, max }: {
   label: string
   value: number
@@ -55,7 +88,7 @@ export function Modal({ title, onClose, children, header, narrow }: { title: str
       <div className={`modal${narrow ? ' narrow' : ''}`} role="dialog" aria-modal="true" aria-label={title} ref={ref}>
         <div className="modal-head">
           <div className="row between">
-            <h2 style={{ margin: 0, fontSize: 20 }}>{title}</h2>
+            <h2 style={{ margin: 0 }}>{title}</h2>
             <button className="btn ghost icon" type="button" aria-label="Fechar" onClick={onClose}>
               ✕
             </button>

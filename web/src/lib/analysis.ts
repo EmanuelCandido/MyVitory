@@ -1,6 +1,6 @@
 import { muscleLabel, muscles, exerciseById } from './catalog'
 import type { DayDoc, PlanSnapshot, SnapshotTemplate } from '../sync/types'
-import { addDays, parseDay, weekStart } from './format'
+import { addDays, isoDay, parseDay, weekStart } from './format'
 
 /** Segundos por repetição, para estimar a duração de um treino. */
 const SECONDS_PER_REP = 3
@@ -93,6 +93,39 @@ export function historyStats(days: DayDoc[], today = new Date()): HistoryStats {
     plannedLast28: recent.filter((d) => d.status !== 'REST').length,
     missedLast28: recent.filter((d) => d.status === 'MISSED').length,
     streakWeeks,
+  }
+}
+
+export interface WeekOverview {
+  /** Treinos feitos (inteiro ou parcial) nesta semana. */
+  done: number
+  /** Dias com treino nesta semana (tudo que não é descanso). */
+  planned: number
+  /** Treinos que ficaram para trás nesta semana: não feitos e não levados para outro dia, ou dias passados sem registro. */
+  missed: number
+  /** Data (ISO) do último treino feito, até hoje. */
+  lastTrained: string | null
+}
+
+/** O resumo que o treinador quer ver ao abrir a atleta: a semana está andando? */
+export function weekOverview(days: DayDoc[], today = new Date()): WeekOverview {
+  const start = isoDay(weekStart(today))
+  const end = isoDay(addDays(weekStart(today), 6))
+  const now = isoDay(today)
+  const week = days.filter((d) => d.date >= start && d.date <= end)
+  const lastTrained =
+    days
+      .filter((d) => trained(d) && d.date <= now)
+      .map((d) => d.date)
+      .sort()
+      .at(-1) ?? null
+  return {
+    done: week.filter(trained).length,
+    planned: week.filter((d) => d.status !== 'REST').length,
+    missed: week.filter(
+      (d) => (d.status === 'MISSED' && !d.movedTo) || (d.status === 'PLANNED' && d.date < now && !d.closed && !d.unavailable),
+    ).length,
+    lastTrained,
   }
 }
 

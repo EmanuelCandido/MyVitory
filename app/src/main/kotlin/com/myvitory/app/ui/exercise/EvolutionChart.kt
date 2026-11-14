@@ -153,17 +153,17 @@ private fun LineChart(points: List<ExerciseHistoryPoint>) {
         val path = Path().apply {
             points.forEachIndexed { i, p -> if (i == 0) moveTo(x(i), y(p.topKg)) else lineTo(x(i), y(p.topKg)) }
         }
-        drawPath(path, Palette.Lime, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(path, Palette.Volt, style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
 
         // Ponto selecionado: marcador de 8 dp com anel da cor do fundo; o último ponto leva o valor escrito.
         val sx = x(selected)
         val sy = y(points[selected].topKg)
         drawLine(Palette.LineStrong, Offset(sx, top), Offset(sx, bottom), strokeWidth = 1.dp.toPx())
         drawCircle(Palette.Ground, radius = 6.dp.toPx(), center = Offset(sx, sy))
-        drawCircle(Palette.Lime, radius = 4.dp.toPx(), center = Offset(sx, sy))
+        drawCircle(Palette.Volt, radius = 4.dp.toPx(), center = Offset(sx, sy))
         if (selected != points.lastIndex) {
             drawCircle(Palette.Ground, radius = 5.dp.toPx(), center = Offset(x(points.lastIndex), y(points.last().topKg)))
-            drawCircle(Palette.Lime, radius = 3.dp.toPx(), center = Offset(x(points.lastIndex), y(points.last().topKg)))
+            drawCircle(Palette.Volt, radius = 3.dp.toPx(), center = Offset(x(points.lastIndex), y(points.last().topKg)))
         }
         val value = measurer.measure("${formatKg(points.last().topKg)} kg", labelStyle)
         val vx = (x(points.lastIndex) - value.size.width).coerceAtLeast(left)

@@ -78,7 +78,7 @@ fun TemplateEditorScreen(templateId: Long, onBack: () -> Unit, onOpenExercise: (
     Column(Modifier.fillMaxSize().background(Palette.Ground).statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) { AppIcon(R.drawable.ic_arrow_back, "Voltar") }
-            Text("Editar treino", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).semantics { heading() })
+            Text("EDITAR TREINO", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).semantics { heading() })
             // Cópia "só nesta semana" some sozinha quando o dia passa; só o treino do plano base é apagado aqui.
             if (state.template?.weekOnly == false) {
                 IconButton(onClick = { confirmDelete = true }, modifier = Modifier.size(48.dp)) {
@@ -101,7 +101,7 @@ fun TemplateEditorScreen(templateId: Long, onBack: () -> Unit, onOpenExercise: (
                             (if (day != null) "Só para ${day.dayOfWeek.long().lowercase()}, ${day.dayOfMonth.twoDigits()}/${day.monthValue.twoDigits()}. " else "Só para um dia desta semana. ") +
                                 "O plano base não muda.",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Palette.Lime,
+                            color = Palette.Volt,
                             modifier = Modifier.padding(start = 4.dp, top = 10.dp),
                         )
                     }
@@ -134,8 +134,8 @@ fun TemplateEditorScreen(templateId: Long, onBack: () -> Unit, onOpenExercise: (
                     modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                 ) {
                     Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        AppIcon(R.drawable.ic_plus, null, tint = Palette.Lime, size = 18.dp)
-                        Text("  Adicionar exercício", style = MaterialTheme.typography.titleMedium, color = Palette.Lime)
+                        AppIcon(R.drawable.ic_plus, null, tint = Palette.Volt, size = 18.dp)
+                        Text("  Adicionar exercício", style = MaterialTheme.typography.titleMedium, color = Palette.Volt)
                     }
                 }
             }
@@ -153,7 +153,7 @@ fun TemplateEditorScreen(templateId: Long, onBack: () -> Unit, onOpenExercise: (
                 )
             },
             confirmButton = {
-                TextButton(onClick = { confirmDelete = false; vm.delete(onBack) }) { Text("Apagar", color = Palette.Orange) }
+                TextButton(onClick = { confirmDelete = false; vm.delete(onBack) }) { Text("Apagar", color = Palette.Flame) }
             },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancelar") } },
             containerColor = Palette.SurfaceHigh,
@@ -186,10 +186,10 @@ private fun NameField(code: String, name: String, onCommit: (String) -> Unit) {
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Palette.Lime,
+            focusedBorderColor = Palette.Volt,
             unfocusedBorderColor = Palette.LineStrong,
-            focusedLabelColor = Palette.Lime,
-            cursorColor = Palette.Lime,
+            focusedLabelColor = Palette.Volt,
+            cursorColor = Palette.Volt,
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -255,9 +255,9 @@ private fun NoteField(note: String, onCommit: (String) -> Unit, modifier: Modifi
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Palette.Lime,
+            focusedBorderColor = Palette.Volt,
             unfocusedBorderColor = Palette.Line,
-            cursorColor = Palette.Lime,
+            cursorColor = Palette.Volt,
         ),
         modifier = modifier
             .fillMaxWidth()

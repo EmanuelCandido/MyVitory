@@ -2,6 +2,7 @@ package com.myvitory.app.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -19,6 +20,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -138,12 +142,13 @@ fun MyVitoryRoot(link: AppLink? = null, onLinkHandled: () -> Unit = {}) {
             containerColor = Palette.Ground,
             snackbarHost = {
                 SnackbarHost(snackbar) { data ->
-                    Snackbar(data, containerColor = Palette.Text, contentColor = Palette.Ground, actionColor = Palette.Ground)
+                    Snackbar(data, containerColor = Palette.Paper, contentColor = Palette.Ink, actionColor = Palette.Ink, shape = RoundedCornerShape(18.dp))
                 }
             },
             bottomBar = {
                 if (showBar) {
-                    NavigationBar(containerColor = Palette.Surface) {
+                    // Linha em cima separa a barra do conteúdo; a aba ativa é a pílula Volt.
+                    NavigationBar(containerColor = Palette.Surface, modifier = Modifier.drawBehind { drawLine(Palette.Line, Offset.Zero, Offset(size.width, 0f), strokeWidth = 1.dp.toPx()) }) {
                         tabs.forEach { tab ->
                             NavigationBarItem(
                                 selected = route == tab.route,
@@ -157,9 +162,9 @@ fun MyVitoryRoot(link: AppLink? = null, onLinkHandled: () -> Unit = {}) {
                                 icon = { AppIcon(tab.icon, null) },
                                 label = { Text(tab.label, style = MaterialTheme.typography.labelMedium) },
                                 colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = Palette.Ground,
+                                    selectedIconColor = Palette.Ink,
                                     selectedTextColor = Palette.Text,
-                                    indicatorColor = Palette.Lime,
+                                    indicatorColor = Palette.Volt,
                                     unselectedIconColor = Palette.TextMuted,
                                     unselectedTextColor = Palette.TextMuted,
                                 ),

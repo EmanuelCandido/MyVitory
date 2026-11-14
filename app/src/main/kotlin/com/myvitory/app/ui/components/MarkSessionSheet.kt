@@ -57,7 +57,7 @@ fun MarkSessionSheet(
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelSmall, color = Palette.Orange)
+            Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelSmall, color = Palette.Flame)
             Text(title, style = MaterialTheme.typography.headlineMedium)
             Text(
                 "Com essa resposta o app sabe quais músculos você treinou.",
@@ -66,18 +66,18 @@ fun MarkSessionSheet(
                 modifier = Modifier.padding(bottom = 8.dp),
             )
             MarkOption("Sim, treinei tudo", null, onAllDone) {
-                Box(Modifier.size(34.dp).background(Palette.Lime, CircleShape), Alignment.Center) {
+                Box(Modifier.size(34.dp).background(Palette.Volt, CircleShape), Alignment.Center) {
                     AppIcon(R.drawable.ic_check, null, tint = Palette.Ground, size = 18.dp)
                 }
             }
             MarkOption("Fiz uma parte", "Você marca quais séries fez", onPartial) {
-                Box(Modifier.size(34.dp).border(2.dp, Palette.Lime, CircleShape).padding(5.dp).clip(CircleShape)) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth(0.5f).background(Palette.Lime))
+                Box(Modifier.size(34.dp).border(2.dp, Palette.Volt, CircleShape).padding(5.dp).clip(CircleShape)) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(0.5f).background(Palette.Volt))
                 }
             }
             MarkOption("Não treinei", null, onMissed) {
-                Box(Modifier.size(34.dp).border(2.dp, Palette.Orange, CircleShape), Alignment.Center) {
-                    AppIcon(R.drawable.ic_close, null, tint = Palette.Orange, size = 16.dp)
+                Box(Modifier.size(34.dp).border(2.dp, Palette.Flame, CircleShape), Alignment.Center) {
+                    AppIcon(R.drawable.ic_close, null, tint = Palette.Flame, size = 16.dp)
                 }
             }
             TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {

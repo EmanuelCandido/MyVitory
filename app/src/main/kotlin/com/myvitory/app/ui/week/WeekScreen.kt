@@ -94,7 +94,7 @@ fun WeekScreen(
     ) {
         Row(Modifier.padding(start = 20.dp, end = 12.dp, top = 22.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Semana", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
+                Text("SEMANA", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
                 Text(
                     if (tab == 0) weekRangeLabel(state.weekStart) else "Repete toda semana",
                     style = MaterialTheme.typography.bodyMedium,
@@ -257,19 +257,19 @@ private fun DayRow(day: DayView, isToday: Boolean, enabled: Boolean, onClick: ()
                         else -> "${day.exerciseCount} exercícios"
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (day.special && movedTo == null) Palette.Lime else Palette.TextMuted,
+                    color = if (day.special && movedTo == null) Palette.Volt else Palette.TextMuted,
                 )
             } else if (day.special) {
-                Text("Só nesta semana", style = MaterialTheme.typography.bodySmall, color = Palette.Lime)
+                Text("Só nesta semana", style = MaterialTheme.typography.bodySmall, color = Palette.Volt)
             }
         }
         day.state.label()?.let { text ->
             when (day.state) {
-                DayState.DONE -> Tag(text, background = Palette.Lime, content = Palette.Ground)
-                DayState.PARTIAL -> Tag(text, background = Palette.SurfaceHigh, content = Palette.Lime)
+                DayState.DONE -> Tag(text, background = Palette.Volt, content = Palette.Ground)
+                DayState.PARTIAL -> Tag(text, background = Palette.SurfaceHigh, content = Palette.Volt)
                 DayState.UNAVAILABLE -> Tag(day.closedLabel ?: text, background = Palette.SurfaceHigh, content = Palette.TextMuted)
-                DayState.MISSED, DayState.UNMARKED, DayState.MOVED -> Tag(text, background = Palette.OrangeSoft, content = Palette.Orange)
-                DayState.TODAY -> Tag(text, background = Palette.Ground, content = Palette.Lime, modifier = Modifier.border(1.5.dp, Palette.Lime, RoundedCornerShape(8.dp)))
+                DayState.MISSED, DayState.UNMARKED, DayState.MOVED -> Tag(text, background = Palette.FlameSoft, content = Palette.Flame)
+                DayState.TODAY -> Tag(text, background = Palette.Volt, content = Palette.Ink)
                 else -> Unit
             }
         } ?: StatusMark(day.state)
@@ -341,8 +341,8 @@ private fun PlanBase(
             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
         ) {
             Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                AppIcon(R.drawable.ic_plus, null, tint = Palette.Lime, size = 18.dp)
-                Text("  Novo treino", style = MaterialTheme.typography.titleMedium, color = Palette.Lime)
+                AppIcon(R.drawable.ic_plus, null, tint = Palette.Volt, size = 18.dp)
+                Text("  Novo treino", style = MaterialTheme.typography.titleMedium, color = Palette.Volt)
             }
         }
     }
@@ -379,16 +379,16 @@ private fun DayActionsSheet(
         ) {
             SectionLabel("${day.date.dayOfWeek.long()} · ${day.date.dayOfMonth.twoDigits()}/${day.date.monthValue.twoDigits()}")
             Text(session?.name ?: "Descanso", style = MaterialTheme.typography.headlineMedium)
-            if (day.special) Text("Mudado só nesta semana", style = MaterialTheme.typography.bodySmall, color = Palette.Lime)
+            if (day.special) Text("Mudado só nesta semana", style = MaterialTheme.typography.bodySmall, color = Palette.Volt)
             if (items.isNotEmpty()) SessionExerciseList(items, onOpenExercise)
             Spacer(Modifier.height(8.dp))
             if (session != null && isPastOrToday) {
-                SheetAction(R.drawable.ic_play, "Abrir treino", Palette.Lime, onOpen)
+                SheetAction(R.drawable.ic_play, "Abrir treino", Palette.Volt, onOpen)
                 if (session.status != SessionStatus.DONE) {
                     SheetAction(R.drawable.ic_check, "Marcar como feito", Palette.Text) { onMark(SessionStatus.DONE, "Treino marcado como feito") }
                 }
                 if (session.status != SessionStatus.MISSED) {
-                    SheetAction(R.drawable.ic_close, "Não treinei", Palette.Orange) { onMark(SessionStatus.MISSED, "Marcado como não treinado") }
+                    SheetAction(R.drawable.ic_close, "Não treinei", Palette.Flame) { onMark(SessionStatus.MISSED, "Marcado como não treinado") }
                 }
                 if (session.status != SessionStatus.PLANNED && !day.unavailable) {
                     SheetAction(R.drawable.ic_timer, "Voltar para planejado", Palette.TextMuted) { onMark(SessionStatus.PLANNED, "Treino voltou para planejado") }
@@ -403,7 +403,7 @@ private fun DayActionsSheet(
                 )
             } else if (canChangeAvailability) {
                 if (day.unavailable) {
-                    SheetAction(R.drawable.ic_calendar, "Estou disponível neste dia", Palette.Lime) { onAvailability(false) }
+                    SheetAction(R.drawable.ic_calendar, "Estou disponível neste dia", Palette.Volt) { onAvailability(false) }
                 } else {
                     SheetAction(R.drawable.ic_calendar, "Não vou poder treinar neste dia", Palette.TextMuted) { onAvailability(true) }
                     Text(
@@ -427,7 +427,7 @@ private fun DayActionsSheet(
                     }
                     if (session != null) PickRow("Descanso", selected = false, onClick = { onPickThisWeek(null) })
                 } else {
-                    if (session?.templateId != null) SheetAction(R.drawable.ic_edit, "Mudar exercícios deste dia", Palette.Lime, onCustomize)
+                    if (session?.templateId != null) SheetAction(R.drawable.ic_edit, "Mudar exercícios deste dia", Palette.Volt, onCustomize)
                     SheetAction(R.drawable.ic_swap, if (session == null) "Treinar neste dia" else "Trocar o treino deste dia", Palette.Text) { picking = true }
                     if (day.special) SheetAction(R.drawable.ic_arrow_back, "Voltar ao plano base", Palette.TextMuted, onReset)
                 }
@@ -481,12 +481,12 @@ private fun PickRow(label: String, selected: Boolean, onClick: () -> Unit) {
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
         color = if (selected) Palette.Ground else Palette.SurfaceHigh,
-        border = if (selected) BorderStroke(2.dp, Palette.Lime) else null,
+        border = if (selected) BorderStroke(2.dp, Palette.Volt) else null,
         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
     ) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            if (selected) AppIcon(R.drawable.ic_check, "Selecionado", tint = Palette.Lime, size = 20.dp)
+            if (selected) AppIcon(R.drawable.ic_check, "Selecionado", tint = Palette.Volt, size = 20.dp)
         }
     }
 }

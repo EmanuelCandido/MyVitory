@@ -6,9 +6,11 @@ import { HistoryTab } from '../components/HistoryTab'
 import { TemplatesTab } from '../components/TemplatesTab'
 import { WeekTab } from '../components/WeekTab'
 import { WeightTab } from '../components/WeightTab'
-import { Confirm } from '../components/ui'
+import { Confirm, Ticket, WarnBadge } from '../components/ui'
+import { historyStats, weekOverview } from '../lib/analysis'
 import { leaveAthlete, useDays, usePlan, useWeights, type Athlete, type PlanState } from '../lib/data'
-import { relative } from '../lib/format'
+import { daysAgo, relative } from '../lib/format'
+import type { DayDoc } from '../sync/types'
 
 const TABS = ['Semana', 'Calendário', 'Treinos', 'Exercícios', 'Histórico', 'Peso'] as const
 type Tab = (typeof TABS)[number]
@@ -54,11 +56,12 @@ export function AthletePage({ user, athlete, onLeft }: { user: User; athlete: At
           <SyncStatus athlete={athlete} plan={plan} />
         </div>
         <span className="spacer" style={{ flex: 1 }} />
-        <button className="btn ghost small" type="button" onClick={() => setLeaving(true)}>
+        <button className="btn small" type="button" onClick={() => setLeaving(true)}>
           Parar de acompanhar
         </button>
       </div>
 
+      <Overview days={days} />
       <nav className="tabs" role="tablist" aria-label="Seções">
         {TABS.map((t) => (
           <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
@@ -67,7 +70,7 @@ export function AthletePage({ user, athlete, onLeft }: { user: User; athlete: At
         ))}
       </nav>
 
-      {plan.error && plan.save === 'error' && <p className="notice orange">Não deu para salvar: {plan.error}. A próxima mudança tenta de novo.</p>}
+      {plan.error && plan.save === 'error' && <p className="notice flame">Não deu para salvar: {plan.error}. A próxima mudança tenta de novo.</p>}
 
       <div role="tabpanel" aria-label={tab}>
         {tab === 'Histórico' ? (
@@ -106,6 +109,41 @@ export function AthletePage({ user, athlete, onLeft }: { user: User; athlete: At
   )
 }
 
+/**
+ * Resumo antes do detalhe: a pergunta do treinador ao abrir a atleta é "ela está treinando?".
+ * Etiquetas como o contador da referência: número grande, unidade pequena.
+ */
+function Overview({ days }: { days: DayDoc[] | undefined }) {
+  if (!days || days.length === 0) return null
+  const week = weekOverview(days)
+  const stats = historyStats(days)
+  const frequency = stats.plannedLast28 ? `${Math.round((stats.doneLast28 / stats.plannedLast28) * 100)}%` : '—'
+  return (
+    <div className="strip tilt kpis" role="list" aria-label="Resumo da atleta">
+      <span role="listitem">
+        <Ticket value={`${week.done}/${week.planned}`} unit="nesta semana" />
+      </span>
+      {week.missed > 0 && (
+        <span role="listitem" className="row" style={{ gap: 4 }}>
+          <WarnBadge size={22} />
+          <Ticket value={week.missed} unit={week.missed === 1 ? 'ficou para trás' : 'ficaram para trás'} />
+        </span>
+      )}
+      <span role="listitem">
+        <Ticket value={frequency} unit="frequência 28 dias" tone="dim" title={`${stats.doneLast28} de ${stats.plannedLast28} treinos`} />
+      </span>
+      <span role="listitem">
+        <Ticket value={stats.streakWeeks} unit={stats.streakWeeks === 1 ? 'semana seguida' : 'semanas seguidas'} tone={stats.streakWeeks > 0 ? 'volt' : 'dim'} />
+      </span>
+      {week.lastTrained && (
+        <span role="listitem">
+          <Ticket value={daysAgo(week.lastTrained)} unit="último treino" tone="paper" />
+        </span>
+      )}
+    </div>
+  )
+}
+
 /** Salvo no painel? Já chegou no celular? */
 function SyncStatus({ athlete, plan }: { athlete: Athlete; plan: PlanState }) {
   const saving = plan.save === 'pending' || plan.save === 'saving'
@@ -115,12 +153,12 @@ function SyncStatus({ athlete, plan }: { athlete: Athlete; plan: PlanState }) {
       {saving ? (
         <span className="chip">Salvando…</span>
       ) : plan.save === 'error' ? (
-        <span className="chip orange">Erro ao salvar</span>
+        <span className="chip flame">Erro ao salvar</span>
       ) : plan.save === 'saved' ? (
-        <span className="chip lime">Salvo</span>
+        <span className="chip volt">Salvo</span>
       ) : null}
       {phoneBehind ? (
-        <span className="chip blue" title="O celular busca as mudanças a cada 15 min, ou na hora com o app aberto.">
+        <span className="chip sky" title="O celular busca as mudanças a cada 15 min, ou na hora com o app aberto.">
           Aguardando o celular
         </span>
       ) : athlete.lastSyncAt ? (
@@ -128,7 +166,7 @@ function SyncStatus({ athlete, plan }: { athlete: Athlete; plan: PlanState }) {
           Celular sincronizou {relative(athlete.lastSyncAt)}
         </span>
       ) : (
-        <span className="chip orange">Celular ainda não sincronizou</span>
+        <span className="chip flame">Celular ainda não sincronizou</span>
       )}
     </>
   )

@@ -15,24 +15,24 @@ import { muscleLabel } from '../lib/catalog'
 import { addDays, DAYS, DAYS_SHORT, dayOfWeek, isoDay, parseDay, plural, shortDate, weekStart } from '../lib/format'
 import { setClosedWeekday, setDay } from '../sync/edits'
 import type { DayDoc, PlanSnapshot } from '../sync/types'
-import { Menu, MenuItem } from './ui'
+import { Menu, MenuItem, Ticket, Warn } from './ui'
 
 const STATUS: Record<DayDoc['status'], { label: string; tone: string }> = {
-  DONE: { label: 'Feito', tone: 'lime' },
-  PARTIAL: { label: 'Parcial', tone: 'blue' },
-  MISSED: { label: 'Não feito', tone: 'orange' },
+  DONE: { label: 'Feito', tone: 'volt' },
+  PARTIAL: { label: 'Parcial', tone: 'sky' },
+  MISSED: { label: 'Não feito', tone: 'flame' },
   PLANNED: { label: 'Planejado', tone: '' },
   REST: { label: 'Descanso', tone: '' },
 }
 
 export function statusChip(day: DayDoc, today: string) {
   if (day.status === 'MISSED' && day.movedTo) {
-    return <span className="chip blue">Movido → {DAYS_SHORT[dayOfWeek(parseDay(day.movedTo)) - 1].toLowerCase()}</span>
+    return <span className="chip sky">Movido → {DAYS_SHORT[dayOfWeek(parseDay(day.movedTo)) - 1].toLowerCase()}</span>
   }
   if (day.closed && day.status !== 'DONE' && day.status !== 'PARTIAL') return <span className="chip">{day.closed}</span>
-  if (day.unavailable && day.status !== 'DONE' && day.status !== 'PARTIAL') return <span className="chip orange">Indisponível</span>
-  if (day.status === 'PLANNED' && day.date < today) return <span className="chip orange">Sem registro</span>
-  if (day.status === 'PLANNED' && day.date === today) return <span className="chip lime">Hoje</span>
+  if (day.unavailable && day.status !== 'DONE' && day.status !== 'PARTIAL') return <span className="chip flame">Indisponível</span>
+  if (day.status === 'PLANNED' && day.date < today) return <span className="chip flame">Sem registro</span>
+  if (day.status === 'PLANNED' && day.date === today) return <span className="chip volt">Hoje</span>
   const s = STATUS[day.status]
   return <span className={`chip ${s.tone}`}>{s.label}</span>
 }
@@ -119,9 +119,14 @@ export function WeekTab({
           const dayWarnings = warnings.filter((w) => w.day === day)
           return (
             <DayCard key={day} day={day} today={isToday} closed={closed}>
+              {isToday && (
+                <span className="day-tag">
+                  <Ticket value="Hoje" tone="volt" small />
+                </span>
+              )}
               <div className="day-head">
                 <span className="day-name">{name}</span>
-                {isToday ? <span className="chip lime">Hoje</span> : <span className="small faint">{shortDate(date)}</span>}
+                <span className="small faint">{shortDate(date)}</span>
               </div>
 
               {closed ? (
@@ -147,9 +152,7 @@ export function WeekTab({
               )}
 
               {dayWarnings.map((w) => (
-                <span key={w.muscle} className="small" style={{ color: 'var(--orange)' }}>
-                  ⚠ {warningText(w)}
-                </span>
+                <Warn key={w.muscle}>{warningText(w)}</Warn>
               ))}
 
               <div className="day-actions">

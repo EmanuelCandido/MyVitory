@@ -62,7 +62,7 @@ import com.myvitory.app.ui.components.AppIcon
 import com.myvitory.app.ui.components.PillTabs
 import com.myvitory.app.ui.components.SectionLabel
 import com.myvitory.app.ui.library.ExerciseEditorDialog
-import com.myvitory.app.ui.theme.BarlowCondensed
+import com.myvitory.app.ui.theme.Mono
 import com.myvitory.app.ui.theme.Palette
 import com.myvitory.app.ui.video.YouTubePlayerBox
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
@@ -125,18 +125,18 @@ fun ExerciseScreen(
                         AppIcon(
                             if (current.pinned) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark,
                             if (current.pinned) "Desafixar vídeo" else "Fixar este vídeo para o exercício",
-                            tint = if (current.pinned) Palette.Lime else Palette.TextMuted,
+                            tint = if (current.pinned) Palette.Volt else Palette.TextMuted,
                             size = 20.dp,
                         )
                     }
                     if (state.videos.size > 1) {
                         TextButton(onClick = vm::nextVideo, modifier = Modifier.heightIn(min = 48.dp)) {
-                            Text("Outro vídeo", color = Palette.Lime, fontWeight = FontWeight.Bold)
+                            Text("Outro vídeo", color = Palette.Volt, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
                 playerMessage?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Orange, modifier = Modifier.padding(horizontal = 20.dp))
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = Palette.Flame, modifier = Modifier.padding(horizontal = 20.dp))
                 }
             }
 
@@ -169,7 +169,7 @@ fun ExerciseScreen(
                         Text("Pontos-chave", style = MaterialTheme.typography.headlineSmall)
                         state.tips.forEachIndexed { i, tip ->
                             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text("${i + 1}", style = MaterialTheme.typography.titleLarge.copy(fontFamily = BarlowCondensed), color = Palette.Lime, modifier = Modifier.width(18.dp))
+                                Text("${i + 1}", style = MaterialTheme.typography.titleLarge.copy(fontFamily = Mono), color = Palette.Volt, modifier = Modifier.width(18.dp))
                                 Text(tip, style = MaterialTheme.typography.bodyMedium, color = Palette.Text.copy(alpha = 0.88f))
                             }
                         }
@@ -243,7 +243,7 @@ fun ExerciseScreen(
             confirmButton = {
                 if (!inUse) {
                     TextButton(onClick = { vm.deleteExercise { ok -> if (ok) { deleting = false; onBack() } else inUse = true } }) {
-                        Text("Apagar", color = Palette.Orange, fontWeight = FontWeight.Bold)
+                        Text("Apagar", color = Palette.Flame, fontWeight = FontWeight.Bold)
                     }
                 }
             },
@@ -260,7 +260,7 @@ fun ExerciseScreen(
 private fun PlayerPlaceholder(searching: Boolean, searchEnabled: Boolean, error: VideoError?, onPaste: () -> Unit) {
     Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).background(Palette.Surface), Alignment.Center) {
         if (searching) {
-            CircularProgressIndicator(color = Palette.Lime)
+            CircularProgressIndicator(color = Palette.Volt)
         } else {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -289,13 +289,13 @@ private fun MuscleChip(text: String, primary: Boolean, muted: Boolean = false) {
         text,
         style = MaterialTheme.typography.bodySmall,
         color = when {
-            primary -> Palette.Lime
+            primary -> Palette.Volt
             muted -> Palette.TextMuted
             else -> Palette.Text
         },
         modifier = Modifier
             .clip(CircleShape)
-            .then(if (primary) Modifier.border(1.5.dp, Palette.Lime, CircleShape) else Modifier.background(Palette.SurfaceHigh))
+            .then(if (primary) Modifier.border(1.5.dp, Palette.Volt, CircleShape) else Modifier.background(Palette.SurfaceHigh))
             .padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }
@@ -313,8 +313,8 @@ private fun AlternativeRow(exercise: ExerciseEntity, canSwap: Boolean, onUse: ()
                 )
             }
             if (canSwap) {
-                OutlinedButton(onClick = onUse, shape = CircleShape, border = BorderStroke(1.dp, Palette.Lime), modifier = Modifier.heightIn(min = 44.dp)) {
-                    Text("Usar", color = Palette.Lime, fontWeight = FontWeight.Bold)
+                OutlinedButton(onClick = onUse, shape = CircleShape, border = BorderStroke(1.dp, Palette.Volt), modifier = Modifier.heightIn(min = 44.dp)) {
+                    Text("Usar", color = Palette.Volt, fontWeight = FontWeight.Bold)
                 }
             } else {
                 AppIcon(R.drawable.ic_chevron_right, null, tint = Palette.Neutral, size = 18.dp)
@@ -361,7 +361,7 @@ private fun MoreVideos(state: ExerciseUiState, onSelect: (Int) -> Unit, onRefres
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     if (video.pinned) SectionLabel("Fixado")
-                    Text(video.title, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, color = if (selected) Palette.Lime else Palette.Text)
+                    Text(video.title, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, color = if (selected) Palette.Volt else Palette.Text)
                     if (video.channel.isNotBlank()) Text(video.channel, style = MaterialTheme.typography.bodySmall, color = Palette.TextMuted, maxLines = 1)
                 }
             }
@@ -390,12 +390,12 @@ private fun PasteLinkDialog(onDismiss: () -> Unit, onSubmit: (String) -> Boolean
                     singleLine = true,
                     isError = invalid,
                     supportingText = { if (invalid) Text("Não parece um link do YouTube.") },
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Palette.Lime, cursorColor = Palette.Lime),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Palette.Volt, cursorColor = Palette.Volt),
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { invalid = !onSubmit(text) }) { Text("Fixar", color = Palette.Lime, fontWeight = FontWeight.Bold) }
+            TextButton(onClick = { invalid = !onSubmit(text) }) { Text("Fixar", color = Palette.Volt, fontWeight = FontWeight.Bold) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar", color = Palette.TextMuted) } },
     )
