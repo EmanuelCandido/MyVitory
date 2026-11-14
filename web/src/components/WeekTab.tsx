@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -52,8 +52,19 @@ export function WeekTab({
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor))
   const [dragging, setDragging] = useState<string | null>(null)
-  const templates = Object.entries(plan.templates).sort(([, a], [, b]) => a.code.localeCompare(b.code))
-  const warnings = recoveryWarnings(plan)
+  // Dia que acabou de receber um treino (arrastar ou "Trocar"): o card carimba por 700 ms.
+  const [justSet, setJustSet] = useState<number | null>(null)
+  useEffect(() => {
+    if (justSet === null) return
+    const id = window.setTimeout(() => setJustSet(null), 700)
+    return () => window.clearTimeout(id)
+  }, [justSet])
+  const templates = useMemo(() => Object.entries(plan.templates).sort(([, a], [, b]) => a.code.localeCompare(b.code)), [plan.templates])
+  const warnings = useMemo(() => recoveryWarnings(plan), [plan])
+  const assign = (day: number, templateId: string | null) => {
+    edit((p) => setDay(p, day, templateId))
+    setJustSet(day)
+  }
 
   const now = new Date()
   const today = isoDay(now)
@@ -67,7 +78,7 @@ export function WeekTab({
     const templateId = String(e.active.id) === 'rest' ? null : String(e.active.id)
     // Dia com a academia fechada não recebe treino: primeiro abra o dia lá em cima.
     if (templateId !== null && plan.week[String(day)]?.closed) return
-    edit((p) => setDay(p, day, templateId))
+    assign(day, templateId)
   }
 
   return (
@@ -118,7 +129,7 @@ export function WeekTab({
           const real = thisWeek.get(isoDay(date))
           const dayWarnings = warnings.filter((w) => w.day === day)
           return (
-            <DayCard key={day} day={day} today={isToday} closed={closed}>
+            <DayCard key={day} day={day} today={isToday} closed={closed} justSet={justSet === day}>
               {isToday && (
                 <span className="day-tag">
                   <Ticket value="Hoje" tone="volt" small />
@@ -161,12 +172,12 @@ export function WeekTab({
                     {(close) => (
                       <>
                         {templates.map(([id, t]) => (
-                          <MenuItem key={id} selected={id === templateId} onSelect={() => (close(), edit((p) => setDay(p, day, id)))}>
+                          <MenuItem key={id} selected={id === templateId} onSelect={() => (close(), assign(day, id))}>
                             <span className="code-badge mini">{t.code}</span>
                             {t.name}
                           </MenuItem>
                         ))}
-                        <MenuItem selected={templateId === null} onSelect={() => (close(), edit((p) => setDay(p, day, null)))}>
+                        <MenuItem selected={templateId === null} onSelect={() => (close(), assign(day, null))}>
                           <span className="code-badge mini muted">–</span>
                           Descanso
                         </MenuItem>
@@ -225,12 +236,12 @@ function TrayItem({ id, code, name }: { id: string; code: string; name: string }
   )
 }
 
-function DayCard({ day, today, closed, children }: { day: number; today: boolean; closed: boolean; children: React.ReactNode }) {
+function DayCard({ day, today, closed, justSet, children }: { day: number; today: boolean; closed: boolean; justSet: boolean; children: React.ReactNode }) {
   const { isOver, setNodeRef } = useDroppable({ id: day, disabled: closed })
   return (
     <section
       ref={setNodeRef}
-      className={`day${isOver ? ' over' : ''}${today ? ' today' : ''}${closed ? ' closed' : ''}`}
+      className={`day${isOver ? ' over' : ''}${today ? ' today' : ''}${closed ? ' closed' : ''}${justSet ? ' just-set' : ''}`}
       aria-label={DAYS[day - 1]}
     >
       {children}

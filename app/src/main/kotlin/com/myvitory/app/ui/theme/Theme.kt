@@ -4,6 +4,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import com.myvitory.app.perf.DevicePerformance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -102,5 +106,9 @@ private val typography = Typography(
 
 @Composable
 fun MyVitoryTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = colors, typography = typography, content = content)
+    val context = LocalContext.current
+    val motion = remember { DevicePerformance.motionLevel(context) }
+    CompositionLocalProvider(LocalMotion provides motion) {
+        MaterialTheme(colorScheme = colors, typography = typography, content = content)
+    }
 }

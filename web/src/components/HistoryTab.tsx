@@ -3,6 +3,7 @@ import { historyStats, loadHistory, trainedExercises } from '../lib/analysis'
 import { dayLabel, isoDay, kg, parseDay, plural, shortDate, weekStart } from '../lib/format'
 import type { DayDoc } from '../sync/types'
 import { LineChart } from './LineChart'
+import { useCountUp } from './ui'
 import { statusChip } from './WeekTab'
 
 /** O que a atleta fez: números das últimas semanas, evolução de carga e cada dia com séries e comentário. */
@@ -14,9 +15,22 @@ export function HistoryTab({ days }: { days: DayDoc[] | undefined }) {
   if (!days) return <p className="empty">Carregando o histórico…</p>
   if (days.length === 0) return <p className="card empty">Ainda não chegou nenhum treino do celular. Os dias aparecem aqui depois do primeiro sync.</p>
 
+  return <History days={days} exercises={exercises} chosen={chosen} onChoose={setExerciseId} />
+}
+
+function History({ days, exercises, chosen, onChoose }: {
+  days: DayDoc[]
+  exercises: ReturnType<typeof trainedExercises>
+  chosen: string | null
+  onChoose: (id: string) => void
+}) {
   const today = isoDay(new Date())
-  const stats = historyStats(days)
-  const points = chosen ? loadHistory(days, chosen) : []
+  const stats = useMemo(() => historyStats(days), [days])
+  const points = useMemo(() => (chosen ? loadHistory(days, chosen) : []), [days, chosen])
+  const done = useCountUp(stats.doneLast28)
+  const percent = useCountUp(stats.plannedLast28 ? Math.round((stats.doneLast28 / stats.plannedLast28) * 100) : 0)
+  const missed = useCountUp(stats.missedLast28)
+  const streak = useCountUp(stats.streakWeeks)
 
   // Agrupa por semana (segunda a domingo), da mais recente para a mais antiga; só o que já aconteceu.
   const past = days.filter((d) => d.date <= today)
@@ -31,7 +45,7 @@ export function HistoryTab({ days }: { days: DayDoc[] | undefined }) {
       <div className="stats">
         <div className="stat">
           <b>
-            {stats.doneLast28}
+            {done}
             <span className="faint" style={{ fontSize: 20 }}>
               /{stats.plannedLast28}
             </span>
@@ -39,15 +53,15 @@ export function HistoryTab({ days }: { days: DayDoc[] | undefined }) {
           <span>treinos feitos nos últimos 28 dias</span>
         </div>
         <div className="stat">
-          <b>{stats.plannedLast28 ? Math.round((stats.doneLast28 / stats.plannedLast28) * 100) : 0}%</b>
+          <b>{percent}%</b>
           <span>de frequência</span>
         </div>
         <div className={`stat${stats.missedLast28 > 0 ? ' flame' : ''}`}>
-          <b>{stats.missedLast28}</b>
+          <b>{missed}</b>
           <span>{stats.missedLast28 === 1 ? 'treino não feito' : 'treinos não feitos'}</span>
         </div>
         <div className="stat">
-          <b>{stats.streakWeeks}</b>
+          <b>{streak}</b>
           <span>{stats.streakWeeks === 1 ? 'semana seguida treinando' : 'semanas seguidas treinando'}</span>
         </div>
       </div>
@@ -56,7 +70,7 @@ export function HistoryTab({ days }: { days: DayDoc[] | undefined }) {
         <section className="card" style={{ marginBottom: 18 }}>
           <div className="row between wrap" style={{ marginBottom: 8 }}>
             <h3 style={{ margin: 0 }}>Evolução da carga</h3>
-            <select className="select" style={{ width: 'auto', minWidth: 240 }} value={chosen} onChange={(e) => setExerciseId(e.target.value)} aria-label="Exercício">
+            <select className="select" style={{ width: 'auto', minWidth: 240 }} value={chosen} onChange={(e) => onChoose(e.target.value)} aria-label="Exercício">
               {exercises.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.name} ({e.count})
@@ -65,6 +79,7 @@ export function HistoryTab({ days }: { days: DayDoc[] | undefined }) {
             </select>
           </div>
           <LineChart
+            key={chosen}
             ariaLabel="Maior carga por treino"
             unit="kg"
             points={points.map((p) => ({ label: shortDate(parseDay(p.date)), value: p.topKg, detail: `reps ${p.reps}` }))}

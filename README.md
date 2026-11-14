@@ -91,6 +91,20 @@ dos exercícios e o painel do treinador (opcional) usam internet.
   (API gratuita, sem chave). Dá para fixar outro vídeo colando o link ou, com uma chave da YouTube API,
   buscar vídeos pelo nome.
 
+### Visual, movimento e celulares fracos
+
+- **Sistema Adesivo:** cores com papel fixo (volt é a ação principal, laranja é o que pede atenção agora,
+  branco é a alternativa, azul é informação), JetBrains Mono para números e títulos e Barlow para leitura.
+  Pílula recebe toque; etiqueta de canto cortado só mostra dado. Os tokens são os mesmos em
+  `ui/theme/Theme.kt` e `web/src/styles.css`.
+- **Movimento que responde:** o botão afunda no toque, a série marcada estoura com vibração, o descanso
+  conta como um contador e pulsa nos últimos 5 segundos. Os tempos (90, 160, 240 e 360 ms) estão em
+  `ui/theme/Motion.kt` e no CSS do painel.
+- **Três níveis por aparelho:** completo; leve em celular de entrada (até 3 GB de RAM ou 4 núcleos) ou PC
+  fraco (até 4 núcleos ou 4 GB), só com o retorno de toque; desligado quando o sistema pede menos movimento.
+  O app abre sem montar banco e sincronização na thread principal, e o painel mostra miniaturas paradas
+  (só o primeiro quadro do GIF) e carrega as abas sob demanda.
+
 ## Como o recálculo funciona
 
 O motor fica em `domain/planner/Planner.kt` e é Kotlin puro, sem dependência do Android.
@@ -198,7 +212,7 @@ A cota gratuita é de 10.000 unidades por dia e cada busca custa 100. O app guar
 
 ## Status
 
-Versão 0.10.0, em preparação para o teste fechado na Play Store. O roteiro de publicação está em
+Versão 0.13.0, em preparação para o teste fechado na Play Store. O roteiro de publicação está em
 [`docs/play-store.md`](docs/play-store.md) e a política de privacidade em
 [`docs/politica-de-privacidade.md`](docs/politica-de-privacidade.md).
 

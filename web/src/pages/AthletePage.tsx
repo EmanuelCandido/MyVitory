@@ -1,12 +1,7 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { User } from 'firebase/auth'
-import { CalendarTab } from '../components/CalendarTab'
-import { ExercisesTab } from '../components/ExercisesTab'
-import { HistoryTab } from '../components/HistoryTab'
-import { TemplatesTab } from '../components/TemplatesTab'
 import { WeekTab } from '../components/WeekTab'
-import { WeightTab } from '../components/WeightTab'
-import { Confirm, Ticket, WarnBadge } from '../components/ui'
+import { Confirm, TabBar, Ticket, useCountUp, WarnBadge } from '../components/ui'
 import { historyStats, weekOverview } from '../lib/analysis'
 import { leaveAthlete, useDays, usePlan, useWeights, type Athlete, type PlanState } from '../lib/data'
 import { daysAgo, relative } from '../lib/format'
@@ -15,13 +10,48 @@ import type { DayDoc } from '../sync/types'
 const TABS = ['Semana', 'Calendário', 'Treinos', 'Exercícios', 'Histórico', 'Peso'] as const
 type Tab = (typeof TABS)[number]
 
+// Só a Semana (aba de abertura) vem no pacote inicial; as outras chegam sob demanda e são pré-buscadas no tempo ocioso.
+const loaders = {
+  calendar: () => import('../components/CalendarTab'),
+  templates: () => import('../components/TemplatesTab'),
+  exercises: () => import('../components/ExercisesTab'),
+  history: () => import('../components/HistoryTab'),
+  weight: () => import('../components/WeightTab'),
+}
+const CalendarTab = lazy(() => loaders.calendar().then((m) => ({ default: m.CalendarTab })))
+const TemplatesTab = lazy(() => loaders.templates().then((m) => ({ default: m.TemplatesTab })))
+const ExercisesTab = lazy(() => loaders.exercises().then((m) => ({ default: m.ExercisesTab })))
+const HistoryTab = lazy(() => loaders.history().then((m) => ({ default: m.HistoryTab })))
+const WeightTab = lazy(() => loaders.weight().then((m) => ({ default: m.WeightTab })))
+
+/** Baixa as abas quando o navegador está à toa: trocar de aba fica instantâneo, sem pesar na abertura. */
+function usePrefetchTabs() {
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((fn: () => void) => window.setTimeout(fn, 1500))
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout
+    const id = idle(() => Object.values(loaders).forEach((load) => void load().catch(() => undefined)))
+    return () => cancel(id)
+  }, [])
+}
+
+/** Sete cards fantasmas no lugar da semana enquanto o plano chega. */
+function WeekSkeleton() {
+  return (
+    <div className="week" aria-label="Carregando o plano" role="status">
+      {Array.from({ length: 7 }, (_, i) => (
+        <div key={i} className="day skeleton" />
+      ))}
+    </div>
+  )
+}
+
 export function AthletePage({ user, athlete, onLeft }: { user: User; athlete: Athlete; onLeft: () => void }) {
   const plan = usePlan(athlete.id)
   const days = useDays(athlete.id)
   const weights = useWeights(athlete.id)
   const [tab, setTab] = useState<Tab>(() => (TABS as readonly string[]).includes(sessionStorage.getItem('tab') ?? '') ? (sessionStorage.getItem('tab') as Tab) : 'Semana')
   const [leaving, setLeaving] = useState(false)
-  const [, tick] = useState(0)
+  usePrefetchTabs()
 
   useEffect(() => {
     try {
@@ -30,12 +60,6 @@ export function AthletePage({ user, athlete, onLeft }: { user: User; athlete: At
       /* sem armazenamento: só não lembra a aba */
     }
   }, [tab])
-
-  // "Sincronizado há X min" anda sozinho.
-  useEffect(() => {
-    const id = setInterval(() => tick((n) => n + 1), 30_000)
-    return () => clearInterval(id)
-  }, [])
 
   if (athlete.lost) {
     return (
@@ -62,23 +86,19 @@ export function AthletePage({ user, athlete, onLeft }: { user: User; athlete: At
       </div>
 
       <Overview days={days} />
-      <nav className="tabs" role="tablist" aria-label="Seções">
-        {TABS.map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
-            {t}
-          </button>
-        ))}
-      </nav>
+      <TabBar tabs={TABS} value={tab} onChange={setTab} label="Seções" />
 
       {plan.error && plan.save === 'error' && <p className="notice flame">Não deu para salvar: {plan.error}. A próxima mudança tenta de novo.</p>}
 
-      <div role="tabpanel" aria-label={tab}>
+      {/* key: o conteúdo da aba nova sobe 8 px esmaecendo. */}
+      <div role="tabpanel" aria-label={tab} key={tab} className="tab-panel">
+        <Suspense fallback={<p className="empty">Carregando…</p>}>
         {tab === 'Histórico' ? (
           <HistoryTab days={days} />
         ) : tab === 'Peso' ? (
           <WeightTab points={weights} />
         ) : plan.status === 'loading' ? (
-          <p className="empty">Carregando o plano…</p>
+          tab === 'Semana' || tab === 'Calendário' ? <WeekSkeleton /> : <p className="empty">Carregando o plano…</p>
         ) : plan.status === 'denied' ? (
           <p className="card empty">Sem acesso ao plano. A atleta pode ter removido você.</p>
         ) : plan.status === 'empty' || !plan.plan ? (
@@ -94,6 +114,7 @@ export function AthletePage({ user, athlete, onLeft }: { user: User; athlete: At
         ) : (
           <ExercisesTab plan={plan.plan} edit={plan.edit} />
         )}
+        </Suspense>
       </div>
 
       {leaving && (
@@ -117,27 +138,35 @@ function Overview({ days }: { days: DayDoc[] | undefined }) {
   if (!days || days.length === 0) return null
   const week = weekOverview(days)
   const stats = historyStats(days)
-  const frequency = stats.plannedLast28 ? `${Math.round((stats.doneLast28 / stats.plannedLast28) * 100)}%` : '—'
+  return <OverviewTickets week={week} stats={stats} />
+}
+
+function OverviewTickets({ week, stats }: { week: ReturnType<typeof weekOverview>; stats: ReturnType<typeof historyStats> }) {
+  const done = useCountUp(week.done)
+  const percent = useCountUp(stats.plannedLast28 ? Math.round((stats.doneLast28 / stats.plannedLast28) * 100) : 0)
+  const streak = useCountUp(stats.streakWeeks)
+  const frequency = stats.plannedLast28 ? `${percent}%` : '—'
+  let i = 0
   return (
     <div className="strip tilt kpis" role="list" aria-label="Resumo da atleta">
       <span role="listitem">
-        <Ticket value={`${week.done}/${week.planned}`} unit="nesta semana" />
+        <Ticket value={`${done}/${week.planned}`} unit="nesta semana" stamp={i++} />
       </span>
       {week.missed > 0 && (
         <span role="listitem" className="row" style={{ gap: 4 }}>
           <WarnBadge size={22} />
-          <Ticket value={week.missed} unit={week.missed === 1 ? 'ficou para trás' : 'ficaram para trás'} />
+          <Ticket value={week.missed} unit={week.missed === 1 ? 'ficou para trás' : 'ficaram para trás'} stamp={i++} />
         </span>
       )}
       <span role="listitem">
-        <Ticket value={frequency} unit="frequência 28 dias" tone="dim" title={`${stats.doneLast28} de ${stats.plannedLast28} treinos`} />
+        <Ticket value={frequency} unit="frequência 28 dias" tone="dim" title={`${stats.doneLast28} de ${stats.plannedLast28} treinos`} stamp={i++} />
       </span>
       <span role="listitem">
-        <Ticket value={stats.streakWeeks} unit={stats.streakWeeks === 1 ? 'semana seguida' : 'semanas seguidas'} tone={stats.streakWeeks > 0 ? 'volt' : 'dim'} />
+        <Ticket value={streak} unit={stats.streakWeeks === 1 ? 'semana seguida' : 'semanas seguidas'} tone={stats.streakWeeks > 0 ? 'volt' : 'dim'} stamp={i++} />
       </span>
       {week.lastTrained && (
         <span role="listitem">
-          <Ticket value={daysAgo(week.lastTrained)} unit="último treino" tone="paper" />
+          <Ticket value={daysAgo(week.lastTrained)} unit="último treino" tone="paper" stamp={i++} />
         </span>
       )}
     </div>
@@ -146,16 +175,25 @@ function Overview({ days }: { days: DayDoc[] | undefined }) {
 
 /** Salvo no painel? Já chegou no celular? */
 function SyncStatus({ athlete, plan }: { athlete: Athlete; plan: PlanState }) {
+  // "Sincronizou há X min" anda sozinho: o relógio re-renderiza só este chip, não a página da atleta.
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 30_000)
+    return () => clearInterval(id)
+  }, [])
   const saving = plan.save === 'pending' || plan.save === 'saving'
   const phoneBehind = plan.updatedBy === 'web' && plan.savedAt && (!athlete.lastSyncAt || athlete.lastSyncAt < plan.savedAt)
   return (
     <>
       {saving ? (
-        <span className="chip">Salvando…</span>
+        <span className="chip">
+          <span className="pulse" aria-hidden="true" />
+          Salvando…
+        </span>
       ) : plan.save === 'error' ? (
         <span className="chip flame">Erro ao salvar</span>
       ) : plan.save === 'saved' ? (
-        <span className="chip volt">Salvo</span>
+        <span className="chip volt stamp">Salvo</span>
       ) : null}
       {phoneBehind ? (
         <span className="chip sky" title="O celular busca as mudanças a cada 15 min, ou na hora com o app aberto.">

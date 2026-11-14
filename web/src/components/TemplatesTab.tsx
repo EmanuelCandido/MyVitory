@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -139,6 +139,13 @@ function TemplateEditor({ id, template, plan, edit, onDuplicate, onDelete }: {
   // Chave estável pelo exercício (com o número da repetição, caso o mesmo apareça duas vezes).
   const keys = template.items.map((item, index) => `${item.exerciseId}#${template.items.slice(0, index).filter((i) => i.exerciseId === item.exerciseId).length}`)
   const ids = template.items.map((i) => i.exerciseId)
+  // Exercício recém-adicionado (a lista cresceu): o último item sobe ao entrar.
+  const count = useRef(template.items.length)
+  const [fresh, setFresh] = useState<string | null>(null)
+  useEffect(() => {
+    if (template.items.length > count.current) setFresh(keys[keys.length - 1])
+    count.current = template.items.length
+  }, [template.items.length, keys])
   const change = (fn: (t: SnapshotTemplate) => SnapshotTemplate) => edit((p) => updateTemplate(p, id, fn))
   const setItem = (index: number, patch: Partial<SnapshotItem>) =>
     change((t) => ({ ...t, items: t.items.map((item, i) => (i === index ? { ...item, ...patch } : item)) }))
@@ -151,7 +158,7 @@ function TemplateEditor({ id, template, plan, edit, onDuplicate, onDelete }: {
   }
 
   return (
-    <section>
+    <section className="fade-in">
       <div className="editor-head">
         <span className="code-badge">{template.code}</span>
         <CommitInput
@@ -190,6 +197,7 @@ function TemplateEditor({ id, template, plan, edit, onDuplicate, onDelete }: {
                 exercise={exerciseById(plan, item.exerciseId)}
                 onChange={(patch) => setItem(index, patch)}
                 onSwap={() => setSwapping(index)}
+                fresh={keys[index] === fresh}
                 onRemove={() => change((t) => ({ ...t, items: t.items.filter((_, i) => i !== index) }))}
               />
             ))}
@@ -232,8 +240,9 @@ function TemplateEditor({ id, template, plan, edit, onDuplicate, onDelete }: {
   )
 }
 
-function ItemRow({ sortId, index, item, exercise, onChange, onSwap, onRemove }: {
+function ItemRow({ sortId, index, item, exercise, fresh, onChange, onSwap, onRemove }: {
   sortId: string
+  fresh: boolean
   index: number
   item: SnapshotItem
   exercise: Exercise
@@ -243,7 +252,7 @@ function ItemRow({ sortId, index, item, exercise, onChange, onSwap, onRemove }: 
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: sortId })
   return (
-    <div ref={setNodeRef} className={`item${isDragging ? ' dragging' : ''}`} style={{ transform: CSS.Transform.toString(transform), transition }}>
+    <div ref={setNodeRef} className={`item${isDragging ? ' dragging' : ''}${fresh ? ' fresh' : ''}`} style={{ transform: CSS.Transform.toString(transform), transition }}>
       <div className="row" style={{ gap: 2 }}>
         <button ref={setActivatorNodeRef} className="handle" type="button" aria-label={`Mover ${exercise.name}`} {...attributes} {...listeners}>
           ⠿

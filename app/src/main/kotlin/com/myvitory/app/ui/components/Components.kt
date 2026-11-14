@@ -1,6 +1,32 @@
 package com.myvitory.app.ui.components
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.myvitory.app.perf.MotionLevel
+import com.myvitory.app.ui.theme.LocalMotion
+import com.myvitory.app.ui.theme.Motion
+import com.myvitory.app.ui.theme.pressScale
+import com.myvitory.app.ui.theme.stampIn
+import com.myvitory.app.ui.theme.wiggleOnce
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -74,10 +100,12 @@ fun AppIcon(@DrawableRes id: Int, contentDescription: String?, modifier: Modifie
 /** Botão principal: um por tela, Volt, 58 dp de altura, rótulo mono em caixa alta (verbo + objeto). */
 @Composable
 fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, @DrawableRes icon: Int? = null, enabled: Boolean = true) {
+    val interaction = remember { MutableInteractionSource() }
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.heightIn(min = 58.dp),
+        modifier = modifier.pressScale(interaction).heightIn(min = 58.dp),
+        interactionSource = interaction,
         shape = CircleShape,
         colors = ButtonDefaults.buttonColors(
             containerColor = Palette.Volt,
@@ -97,10 +125,12 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
 /** Alternativa dentro da placa de decisão: pílula Paper, mesma forma da principal e menos peso. */
 @Composable
 fun PaperButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    val interaction = remember { MutableInteractionSource() }
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.heightIn(min = 52.dp),
+        modifier = modifier.pressScale(interaction).heightIn(min = 52.dp),
+        interactionSource = interaction,
         shape = CircleShape,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
         colors = ButtonDefaults.buttonColors(
@@ -117,9 +147,11 @@ fun PaperButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
 /** Ação de apoio, fora de uma decisão (Ver treino, Adicionar série): contorno de 2 dp. */
 @Composable
 fun SecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val interaction = remember { MutableInteractionSource() }
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 48.dp),
+        modifier = modifier.pressScale(interaction).heightIn(min = 48.dp),
+        interactionSource = interaction,
         shape = CircleShape,
         border = BorderStroke(2.dp, Palette.LineStrong),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = Palette.Text),
@@ -165,24 +197,44 @@ fun Ticket(
     tone: TicketTone = TicketTone.Flame,
     big: Boolean = false,
     description: String? = null,
+    /** Carimbo de entrada (uma vez por execução por chave); [stampIndex] escalona 70 ms. */
+    stampKey: String? = null,
+    stampIndex: Int = 0,
+    /** Valor novo entra de cima e o antigo sai por baixo (contador do descanso, progresso). */
+    animateValue: Boolean = false,
 ) {
     val style = MaterialTheme.typography.labelLarge
+    val valueStyle = style.copy(fontSize = if (big) 30.sp else 14.sp, lineHeight = if (big) 32.sp else 17.sp, letterSpacing = 0.sp)
+    val unitStyle = MaterialTheme.typography.labelSmall.copy(fontSize = if (big) 12.sp else 9.5.sp, letterSpacing = 0.4.sp)
+    val animated = animateValue && LocalMotion.current == MotionLevel.Full
     Row(
         modifier
+            .then(if (stampKey != null) Modifier.stampIn(stampKey, stampIndex) else Modifier)
             .clip(TicketShape)
             .background(tone.background)
             .padding(horizontal = if (big) 11.dp else 8.dp, vertical = if (big) 6.dp else 5.dp)
             .semantics(mergeDescendants = true) { if (description != null) contentDescription = description },
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        Text(value.uppercase(), style = style.copy(fontSize = if (big) 30.sp else 14.sp, lineHeight = if (big) 32.sp else 17.sp, letterSpacing = 0.sp), color = tone.content, modifier = Modifier.alignByBaseline())
-        if (unit != null) {
-            Text(
-                unit.uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = if (big) 12.sp else 9.5.sp, letterSpacing = 0.4.sp),
-                color = tone.content.copy(alpha = 0.78f),
-                modifier = Modifier.alignByBaseline(),
-            )
+        if (animated) {
+            AnimatedContent(
+                targetState = value.uppercase(),
+                transitionSpec = {
+                    (slideInVertically(tween(Motion.Short, easing = Motion.EaseOut)) { -it } + fadeIn(tween(Motion.Short))) togetherWith
+                        (slideOutVertically(tween(Motion.Short, easing = Motion.EaseOut)) { it } + fadeOut(tween(Motion.Tap))) using
+                        SizeTransform(clip = true)
+                },
+                label = "ticketValue",
+                modifier = Modifier.align(Alignment.Bottom),
+            ) { text -> Text(text, style = valueStyle, color = tone.content) }
+            if (unit != null) {
+                Text(unit.uppercase(), style = unitStyle, color = tone.content.copy(alpha = 0.78f), modifier = Modifier.align(Alignment.Bottom).padding(bottom = if (big) 6.dp else 2.dp))
+            }
+        } else {
+            Text(value.uppercase(), style = valueStyle, color = tone.content, modifier = Modifier.alignByBaseline())
+            if (unit != null) {
+                Text(unit.uppercase(), style = unitStyle, color = tone.content.copy(alpha = 0.78f), modifier = Modifier.alignByBaseline())
+            }
         }
     }
 }
@@ -203,39 +255,51 @@ fun TicketStrip(modifier: Modifier = Modifier, tilt: Boolean = true, content: @C
 /** Selo de alerta: triângulo laranja girado, sempre com texto ao lado. */
 @Composable
 fun WarningBadge(modifier: Modifier = Modifier, size: Dp = 24.dp) {
-    Image(painterResource(R.drawable.badge_warning), contentDescription = null, modifier = modifier.size(size).rotate(-8f))
+    Image(painterResource(R.drawable.badge_warning), contentDescription = null, modifier = modifier.size(size).rotate(-8f).wiggleOnce(Unit))
 }
 
-/** Segmentado em pílula (Esta semana | Plano base): a opção ativa em Volt. */
+/** Segmentado em pílula (Esta semana | Plano base): a pílula Volt desliza até a opção tocada. */
 @Composable
 fun PillTabs(options: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val motion = LocalMotion.current
+    val haptics = LocalHapticFeedback.current
+    val position by animateFloatAsState(
+        selected.toFloat(),
+        if (motion == MotionLevel.Full) tween(Motion.Short, easing = Motion.EaseOut) else snap(),
+        label = "pillTabs",
+    )
     Row(
         modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .clip(CircleShape)
             .background(Palette.Surface)
-            .padding(4.dp),
+            .padding(4.dp)
+            // Indicador desenhado atrás das opções: a posição anima só na fase de desenho.
+            .drawBehind {
+                val gap = 4.dp.toPx()
+                val width = (size.width - gap * (options.size - 1)) / options.size
+                drawRoundRect(Palette.Volt, topLeft = Offset(position * (width + gap), 0f), size = Size(width, size.height), cornerRadius = CornerRadius(size.height / 2))
+            },
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         options.forEachIndexed { index, label ->
             val on = index == selected
+            val color by animateColorAsState(if (on) Palette.Ink else Palette.TextMuted, tween(Motion.Short), label = "pillTabText")
             Box(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .heightIn(min = 40.dp)
                     .clip(CircleShape)
-                    .background(if (on) Palette.Volt else Color.Transparent)
                     .semantics { role = Role.Tab; this.selected = on }
-                    .clickable { onSelect(index) },
+                    .clickable {
+                        if (!on) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                        onSelect(index)
+                    },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    label.uppercase(),
-                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.5.sp),
-                    color = if (on) Palette.Ink else Palette.TextMuted,
-                )
+                Text(label.uppercase(), style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.5.sp), color = color)
             }
         }
     }

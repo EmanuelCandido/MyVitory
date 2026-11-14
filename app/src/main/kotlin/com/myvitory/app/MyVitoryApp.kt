@@ -7,6 +7,8 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
+import coil3.memory.MemoryCache
+import com.myvitory.app.perf.DevicePerformance
 import androidx.work.Configuration
 import com.myvitory.app.data.CoachRepository
 import com.myvitory.app.data.TrainingRepository
@@ -60,14 +62,20 @@ class MyVitoryApp : Application(), Configuration.Provider, SingletonImageLoader.
     override val workManagerConfiguration: Configuration get() = Configuration.Builder().build()
 
     // GIFs de execução animados (ExerciseDB). O decodificador nativo só existe a partir do Android 9.
+    // Celular fraco: cache de memória menor (15% em vez de 25%), menos coleta de lixo com a lista de exercícios.
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
             .components { add(if (Build.VERSION.SDK_INT >= 28) AnimatedImageDecoder.Factory() else GifDecoder.Factory()) }
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, if (DevicePerformance.isLowEnd(this)) 0.15 else 0.25)
+                    .build()
+            }
             .build()
 
     val container: AppContainer by lazy {
         val db = MyVitoryDatabase.create(this)
-        val api = YouTubeApi(BuildConfig.YOUTUBE_API_KEY, packageName, AppSignature.sha1(this))
+        val api = YouTubeApi(BuildConfig.YOUTUBE_API_KEY, packageName, { AppSignature.sha1(this) })
         val settings = SettingsRepository(this)
         val training = TrainingRepository(db)
         val sync = if (FirebaseSetup.configured) {
@@ -92,6 +100,13 @@ class MyVitoryApp : Application(), Configuration.Provider, SingletonImageLoader.
     override fun onCreate() {
         super.onCreate()
         Notifications.createChannels(this)
+        // Banco, Firebase e WorkManager montam fora da thread principal, em paralelo com a primeira tela.
+        // (Antes, sync e atualizador tocavam o container aqui e o montavam inteiro antes do primeiro quadro.)
+        appScope.launch { startInBackground() }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun startInBackground() {
         appScope.launch { container.training.seedIfEmpty() }
         // Widget acompanha a semana: marcar, começar ou recalcular atualiza a tela inicial. Segue a virada do dia.
         appScope.launch {

@@ -28,6 +28,13 @@
   --chamfer-sm: polygon(3px 0, calc(100% - 3px) 0, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 0 calc(100% - 3px), 0 3px);
   --font: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  /* Movimento (mesmos nomes de Motion no app). Só transform e opacity animam. */
+  --tap: 90ms;
+  --short: 160ms;
+  --medium: 240ms;
+  --long: 360ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-stamp: cubic-bezier(0.34, 1.56, 0.64, 1);
   color-scheme: dark;
 }
 
@@ -99,13 +106,13 @@ h1, h2, h3 { text-wrap: balance; }
   align-items: center;
   gap: 16px;
   padding: 12px 24px;
-  background: color-mix(in srgb, var(--ground) 92%, transparent);
-  backdrop-filter: blur(8px);
+  /* Sólido de propósito: desfoque (backdrop-filter) repinta a faixa a cada rolagem e pesa em vídeo integrado. */
+  background: var(--ground);
   border-bottom: 1px solid var(--line);
 }
 
 .brand { display: inline-flex; align-items: center; gap: 10px; font: 800 18px/1 var(--font-mono); letter-spacing: -0.01em; text-transform: uppercase; color: inherit; text-decoration: none; }
-.brand small { font: 500 13px var(--font); color: var(--text-muted); letter-spacing: 0; text-transform: none; }
+.brand small { font: 400 13px var(--font);color: var(--text-muted); letter-spacing: 0; text-transform: none; }
 .brand-mark {
   width: 30px;
   height: 30px;
@@ -134,6 +141,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 80px; }
 
 /* Abas: segmentado em pílula, a ativa em volt. */
 .tabs {
+  position: relative;
   display: flex;
   gap: 4px;
   width: fit-content;
@@ -146,6 +154,8 @@ main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 80px; }
   scrollbar-width: none;
 }
 .tabs button {
+  position: relative;
+  z-index: 1;
   flex: none;
   min-height: 38px;
   padding: 0 16px;
@@ -160,7 +170,18 @@ main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 80px; }
   white-space: nowrap;
 }
 .tabs button:hover { color: var(--text); background: var(--surface-high); }
-.tabs button[aria-selected='true'] { background: var(--volt); color: var(--ink); }
+.tabs button[aria-selected='true'] { background: var(--volt); color: var(--ink); transition: color var(--short) var(--ease-out); }
+/* Com a medida pronta, a pílula volt vira um indicador que desliza até a aba escolhida. */
+.tabs.ready button[aria-selected='true'] { background: none; }
+.tabs-indicator {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 0;
+  border-radius: 999px;
+  background: var(--volt);
+  transition: transform var(--short) var(--ease-out), width var(--short) var(--ease-out);
+}
 
 .section-label { font: 700 11.5px/1.3 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); margin: 0 0 10px; }
 
@@ -203,9 +224,14 @@ main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 80px; }
   text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s, transform 0.12s, filter 0.12s;
+  transition: background var(--tap), transform var(--tap) var(--ease-out), filter var(--tap);
 }
 .btn:hover { background: var(--surface-high); }
+/* Retorno de toque: afunda 4% no mesmo quadro do clique (fica também no modo leve). */
+.btn:active:not(:disabled), .filter-chip:active, .tabs button:active, .menu-item:active, .template-row:active, .exercise-card:active:not([aria-disabled='true']), .athlete-card:active {
+  transform: scale(0.96) translateY(1px);
+}
+.filter-chip, .template-row, .exercise-card, .athlete-card, .menu-item { transition: transform var(--tap) var(--ease-out), background var(--tap), box-shadow var(--tap); }
 .btn:disabled { opacity: 0.4; cursor: default; }
 .btn.primary { min-height: 44px; background: var(--volt); color: var(--ink); box-shadow: none; }
 .btn.primary:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-1px); }
@@ -299,9 +325,9 @@ main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 80px; }
   flex-direction: column;
   gap: 10px;
   box-shadow: inset 0 0 0 1px var(--line);
-  transition: box-shadow 0.15s, background 0.15s;
+  transition: transform var(--short) var(--ease-out), background var(--short);
 }
-.day.over { box-shadow: inset 0 0 0 2px var(--volt); background: color-mix(in srgb, var(--volt) 7%, var(--surface)); }
+.day.over { box-shadow: inset 0 0 0 2px var(--volt); background: color-mix(in srgb, var(--volt) 7%, var(--surface)); transform: scale(1.02); }
 .day-tag { position: absolute; top: -11px; left: 10px; transform: rotate(-3deg); z-index: 1; }
 .day-name { font: 700 11px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); }
 .day-template { display: flex; flex-direction: column; gap: 4px; }
@@ -316,7 +342,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 80px; }
   font-size: 15px; font-weight: 700; line-height: 1.2;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
 }
-.day-title.quiet { color: var(--text-muted); font-weight: 500; }
+.day-title.quiet { color: var(--text-muted); font-weight: 400; }
 .day-title.gone { color: var(--text-faint); text-decoration: line-through; }
 /* Origem do dia (calendário): marca chanfrada colorida antes do texto, nunca só cor. */
 .origin { font-size: 12px; color: var(--text-faint); line-height: 1.3; }
@@ -537,7 +563,81 @@ main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 80px; }
   .detail { grid-template-columns: 1fr; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .btn, .day { transition: none; }
-  .btn.primary:hover:not(:disabled) { transform: none; }
+/* ---------- Movimento ----------
+ * Três níveis em <html data-motion> (main.tsx): full; lite (≤4 núcleos, ≤4 GB ou economia de dados: só retorno de
+ * toque e trocas curtas); off (reduzir movimento do sistema: nada se move). Só transform e opacity animam.
+ */
+
+.btn.primary:active:not(:disabled) { transform: scale(0.96) translateY(1px); }
+
+@keyframes stamp { 0% { opacity: 0; transform: scale(1.35) rotate(-8deg); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop { from { opacity: 0; transform: scale(0.94) translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes wiggle { 0%, 100% { transform: rotate(-8deg); } 25% { transform: rotate(10deg); } 50% { transform: rotate(-14deg); } 75% { transform: rotate(4deg); } }
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes flip-up { from { opacity: 0; transform: translateY(60%); } to { opacity: 1; transform: none; } }
+@keyframes flip-down { from { opacity: 0; transform: translateY(-60%); } to { opacity: 1; transform: none; } }
+@keyframes ghost { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.8; } }
+@keyframes day-stamp { 0% { transform: scale(1); } 35% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes dot { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+/* Carimbo: etiquetas entram como adesivo batido, 70 ms entre cada (--i). */
+.stamp-in { animation: stamp var(--long) var(--ease-stamp) both; animation-delay: calc(var(--i, 0) * 70ms); }
+.tab-panel { animation: rise var(--short) var(--ease-out) both; }
+.fade-in { animation: fade var(--short) var(--ease-out) both; }
+.menu-list { animation: pop var(--short) var(--ease-out) both; transform-origin: top left; }
+.week > :nth-child(7n + 5) .menu-list, .week > :nth-child(7n + 6) .menu-list, .week > :nth-child(7n) .menu-list { transform-origin: top right; }
+.modal-backdrop { animation: fade var(--medium) var(--ease-out) both; }
+.modal { animation: modal-in var(--medium) var(--ease-out) both; }
+.warn .badge { animation: wiggle 520ms var(--ease-out) 1 both; }
+.chart .draw { stroke-dasharray: 1; animation: draw 700ms var(--ease-out) both; }
+.stepper output span { display: inline-block; }
+.stepper output .up { animation: flip-up var(--short) var(--ease-out); }
+.stepper output .down { animation: flip-down var(--short) var(--ease-out); }
+.item.fresh { animation: rise var(--medium) var(--ease-out) both; }
+.chip.stamp { animation: stamp var(--long) var(--ease-stamp) both; }
+.chip .pulse { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: dot 900ms ease-in-out infinite; }
+/* Treino posto num dia: o card carimba e o contorno volt acende e apaga. */
+.day::after { content: ''; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 2px var(--volt); opacity: 0; pointer-events: none; }
+.day.just-set { animation: day-stamp var(--long) var(--ease-stamp); }
+.day.just-set::after { animation: flash 700ms var(--ease-out); }
+.day.skeleton { animation: ghost 1.2s ease-in-out infinite; min-height: 210px; }
+.hero > * { animation: rise var(--medium) var(--ease-out) both; }
+.hero > :nth-child(2) { animation-delay: 60ms; }
+.hero > :nth-child(3) { animation-delay: 120ms; }
+.hero > :nth-child(n + 4) { animation-delay: 180ms; }
+
+/* Leve: sem carimbo, sem subir, sem desenhar; menus e modais só esmaecem, rápido. */
+html[data-motion='lite'] .stamp-in, html[data-motion='lite'] .chip.stamp, html[data-motion='lite'] .tab-panel, html[data-motion='lite'] .hero > *,
+html[data-motion='lite'] .warn .badge, html[data-motion='lite'] .chart .draw, html[data-motion='lite'] .item.fresh, html[data-motion='lite'] .day.just-set,
+html[data-motion='lite'] .stepper output span, html[data-motion='lite'] .day.skeleton, html[data-motion='lite'] .fade-in { animation: none; }
+html[data-motion='lite'] .warn .badge { transform: rotate(-8deg); }
+html[data-motion='lite'] .menu-list, html[data-motion='lite'] .modal, html[data-motion='lite'] .modal-backdrop { animation: fade var(--tap) linear both; }
+html[data-motion='lite'] .day.over { transform: none; }
+html[data-motion='lite'] .tabs-indicator { transition: none; }
+
+/* Desligado (ou reduzir movimento): o estado final aparece direto. */
+html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='off'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0.01ms !important;
 }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Desempenho ----------
+ * Listas longas sem popups: o navegador pula layout e pintura do que está fora da tela.
+ * (As semanas do calendário ficam de fora: content-visibility cortaria o menu "Trocar".)
+ */
+.history-week { content-visibility: auto; contain-intrinsic-size: auto 360px; }
+.exercise-grid .exercise-card { content-visibility: auto; contain-intrinsic-size: auto 74px; }

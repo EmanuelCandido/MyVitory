@@ -67,6 +67,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.myvitory.app.perf.MotionLevel
+import com.myvitory.app.ui.theme.LocalMotion
+import com.myvitory.app.ui.theme.Motion
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -113,6 +125,8 @@ fun WorkoutScreen(sessionId: Long, onClose: () -> Unit, onOpenExercise: (String)
     LaunchedEffect(currentIndex) { expanded = null }
     val open = expanded ?: currentIndex
 
+    val haptics = LocalHapticFeedback.current
+    val motion = LocalMotion.current
     Box(Modifier.fillMaxSize().background(Palette.Ground)) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             TopBar(
@@ -122,6 +136,7 @@ fun WorkoutScreen(sessionId: Long, onClose: () -> Unit, onOpenExercise: (String)
                 onClose = onClose,
                 onFinish = {
                     vm.finish { status ->
+                        if (status != null) haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                         when (status) {
                             null -> askEmpty = true
                             SessionStatus.DONE -> { undo.show("Treino concluído", null); onClose() }
@@ -138,19 +153,16 @@ fun WorkoutScreen(sessionId: Long, onClose: () -> Unit, onOpenExercise: (String)
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         data.exercises.forEachIndexed { i, ex ->
                             val done = ex.sets.all { it.done }
-                            Box(
-                                Modifier
-                                    .weight(1f)
-                                    .height(7.dp)
-                                    .clip(TicketShape)
-                                    .background(
-                                        when {
-                                            done -> Palette.Volt
-                                            i == currentIndex -> Palette.Volt.copy(alpha = 0.45f)
-                                            else -> Palette.Line
-                                        }
-                                    )
+                            val color by animateColorAsState(
+                                when {
+                                    done -> Palette.Volt
+                                    i == currentIndex -> Palette.Volt.copy(alpha = 0.45f)
+                                    else -> Palette.Line
+                                },
+                                tween(if (motion == MotionLevel.Off) 0 else Motion.Short),
+                                label = "segment",
                             )
+                            Box(Modifier.weight(1f).height(7.dp).clip(TicketShape).background(color))
                         }
                     }
                 }
@@ -163,6 +175,7 @@ fun WorkoutScreen(sessionId: Long, onClose: () -> Unit, onOpenExercise: (String)
                 val exercises = data?.exercises.orEmpty()
                 items(exercises.size, key = { "${exercises[it].position}-${exercises[it].exerciseId}" }) { index ->
                     val ex = exercises[index]
+                    Box(if (motion == MotionLevel.Full) Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = tween(Motion.Medium, easing = Motion.EaseOut)) else Modifier) {
                     if (index == open) {
                         ExerciseCard(
                             exercise = ex,
@@ -174,6 +187,7 @@ fun WorkoutScreen(sessionId: Long, onClose: () -> Unit, onOpenExercise: (String)
                         )
                     } else {
                         ExerciseRow(index + 1, ex, onClick = { expanded = index })
+                    }
                     }
                 }
                 if (data != null && data.exercises.isEmpty()) {
@@ -412,19 +426,50 @@ private fun SetRow(
         )
         // Caixa de seleção de verdade: o TalkBack lê "Série 2, 150 kg, 10 repetições, marcada".
         val description = "Série ${log.setIndex + 1}, ${formatKg(log.weightKg)} kg, ${log.reps} repetições"
+        val motion = LocalMotion.current
+        val haptics = LocalHapticFeedback.current
+        val fill by animateColorAsState(
+            if (log.done) Palette.Volt else Color.Transparent,
+            tween(if (motion == MotionLevel.Off) 0 else Motion.Short, easing = Motion.EaseOut),
+            label = "setFill",
+        )
+        // O ✓ estoura com mola só quando a série acabou de ser marcada (não ao abrir a tela).
+        val pop = remember(log.id) { Animatable(1f) }
+        var wasDone by remember(log.id) { mutableStateOf(log.done) }
+        LaunchedEffect(log.done) {
+            if (log.done && !wasDone && motion == MotionLevel.Full) {
+                pop.snapTo(0.4f)
+                pop.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 600f))
+            }
+            wasDone = log.done
+        }
         Box(
             Modifier
                 .size(48.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .then(
-                    if (log.done) Modifier.background(Palette.Volt)
-                    else Modifier.border(2.dp, Palette.Neutral, RoundedCornerShape(14.dp))
+                .background(fill)
+                .then(if (log.done) Modifier else Modifier.border(2.dp, Palette.Neutral, RoundedCornerShape(14.dp)))
+                .toggleable(
+                    value = log.done,
+                    role = Role.Checkbox,
+                    onValueChange = {
+                        haptics.performHapticFeedback(if (log.done) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn)
+                        onToggle(log)
+                    },
                 )
-                .toggleable(value = log.done, role = Role.Checkbox, onValueChange = { onToggle(log) })
                 .semantics { contentDescription = description },
             Alignment.Center,
         ) {
-            AppIcon(R.drawable.ic_check, null, tint = if (log.done) Palette.Ground else Palette.Neutral, size = 22.dp)
+            AppIcon(
+                R.drawable.ic_check,
+                null,
+                tint = if (log.done) Palette.Ink else Palette.Neutral,
+                size = 22.dp,
+                modifier = Modifier.graphicsLayer {
+                    scaleX = pop.value
+                    scaleY = pop.value
+                },
+            )
         }
     }
 }
@@ -483,9 +528,22 @@ private fun RestBar(timer: RestTimer, onMinus: () -> Unit, onPlus: () -> Unit, o
     }
     // O relógio anda a cada 250 ms, mas a barra só recompõe quando o segundo muda.
     val remaining by remember(timer) { derivedStateOf { ((timer.endsAt - now + 999) / 1000).coerceAtLeast(0) } }
-    val progress = 1f - remaining.toFloat() / timer.totalSec.coerceAtLeast(1)
+    val motion = LocalMotion.current
+    val full = motion == MotionLevel.Full
+    val target = 1f - remaining.toFloat() / timer.totalSec.coerceAtLeast(1)
+    // Completo: a barra anda contínua (1 s linear até o próximo segundo); leve: pula de segundo em segundo.
+    val progress by animateFloatAsState(target, if (full) tween(1_000, easing = LinearEasing) else tween(0), label = "restProgress")
     val minutes = remaining / 60
     val seconds = remaining % 60
+    val urgent = remaining in 1..5
+    val glow by animateFloatAsState(if (urgent) 0.55f else 0.32f, tween(Motion.Medium), label = "restGlow")
+    val pulse = remember(timer) { Animatable(1f) }
+    LaunchedEffect(remaining) {
+        if (urgent && full) {
+            pulse.snapTo(1.08f)
+            pulse.animateTo(1f, tween(420, easing = Motion.EaseOut))
+        }
+    }
     Column(Modifier.fillMaxWidth().background(Palette.Surface).navigationBarsPadding()) {
         LinearProgressIndicator(
             progress = { progress },
@@ -508,18 +566,26 @@ private fun RestBar(timer: RestTimer, onMinus: () -> Unit, onPlus: () -> Unit, o
             ) {
                 SectionLabel("Descanso", color = Palette.Flame)
                 TicketStrip(
-                    Modifier.drawBehind {
-                        // Brilho laranja atrás do contador, como na referência.
-                        drawCircle(
-                            Brush.radialGradient(listOf(Palette.Flame.copy(alpha = 0.32f), Color.Transparent), center = Offset(size.width * 0.45f, size.height / 2), radius = size.width * 0.75f),
-                            radius = size.width * 0.75f,
-                            center = Offset(size.width * 0.45f, size.height / 2),
-                        )
-                    },
+                    Modifier
+                        .graphicsLayer {
+                            scaleX = pulse.value
+                            scaleY = pulse.value
+                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                        }
+                        .then(
+                            // Brilho laranja atrás do contador, como na referência. Fora no nível leve (gradiente a cada quadro).
+                            if (!full) Modifier else Modifier.drawBehind {
+                                drawCircle(
+                                    Brush.radialGradient(listOf(Palette.Flame.copy(alpha = glow), Color.Transparent), center = Offset(size.width * 0.45f, size.height / 2), radius = size.width * 0.75f),
+                                    radius = size.width * 0.75f,
+                                    center = Offset(size.width * 0.45f, size.height / 2),
+                                )
+                            },
+                        ),
                     tilt = false,
                 ) {
-                    Ticket(minutes.toInt().twoDigits(), unit = "m", big = true)
-                    Ticket(seconds.toInt().twoDigits(), unit = "s", big = true)
+                    Ticket(minutes.toInt().twoDigits(), unit = "m", big = true, animateValue = true)
+                    Ticket(seconds.toInt().twoDigits(), unit = "s", big = true, animateValue = true)
                 }
             }
             RestButton("−15", "Menos 15 segundos", onMinus)

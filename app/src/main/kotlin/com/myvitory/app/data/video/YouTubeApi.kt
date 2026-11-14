@@ -39,9 +39,15 @@ fun interface HttpGet {
 class YouTubeApi(
     private val apiKey: String,
     private val packageName: String,
-    private val certSha1: String?,
+    certSha1: () -> String?,
     private val http: HttpGet = UrlConnectionGet,
 ) {
+    constructor(apiKey: String, packageName: String, certSha1: String?, http: HttpGet = UrlConnectionGet) :
+        this(apiKey, packageName, { certSha1 }, http)
+
+    /** Ler a assinatura do pacote custa alguns ms: fica para a primeira busca, fora da abertura do app. */
+    private val certSha1 by lazy(certSha1)
+
     val enabled get() = apiKey.isNotBlank()
 
     suspend fun search(query: String, max: Int = 8): List<VideoResult> = withContext(Dispatchers.IO) {

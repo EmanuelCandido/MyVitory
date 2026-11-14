@@ -1,6 +1,18 @@
 package com.myvitory.app.ui
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.navigation.NavBackStackEntry
+import com.myvitory.app.perf.MotionLevel
+import com.myvitory.app.ui.theme.LocalMotion
+import com.myvitory.app.ui.theme.Motion
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -71,6 +83,38 @@ private object Routes {
 
 private data class Tab(val route: String, val label: String, @param:DrawableRes val icon: Int)
 
+/**
+ * Transições de tela. Sem elas, a navegação usa um esmaecer padrão de 700 ms em toda troca (duas telas inteiras
+ * compostas em camada). Abas: esmaecer de 160 ms. Telas empurradas (treino, exercício, nova semana): entram 12% da
+ * direita em 240 ms e saem pelo mesmo lado. No nível leve ou desligado, troca direta.
+ */
+private class ScreenTransitions(private val motion: MotionLevel, private val tabRoutes: Set<String>) {
+    private val full get() = motion == MotionLevel.Full
+    private fun AnimatedContentTransitionScope<NavBackStackEntry>.betweenTabs() =
+        initialState.destination.route in tabRoutes && targetState.destination.route in tabRoutes
+
+    val enter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+        when {
+            !full -> EnterTransition.None
+            betweenTabs() -> fadeIn(tween(Motion.Short, easing = Motion.EaseOut))
+            else -> slideInHorizontally(tween(Motion.Medium, easing = Motion.EaseOut)) { it / 8 } + fadeIn(tween(Motion.Medium, easing = Motion.EaseOut))
+        }
+    }
+    val exit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+        if (!full) ExitTransition.None else fadeOut(tween(Motion.Tap))
+    }
+    val popEnter: AnimatedContentTransitionScope<NavBackStackEntry>.() -> EnterTransition = {
+        if (!full) EnterTransition.None else fadeIn(tween(Motion.Short, easing = Motion.EaseOut))
+    }
+    val popExit: AnimatedContentTransitionScope<NavBackStackEntry>.() -> ExitTransition = {
+        when {
+            !full -> ExitTransition.None
+            betweenTabs() -> fadeOut(tween(Motion.Tap))
+            else -> slideOutHorizontally(tween(Motion.Short, easing = Motion.EaseOut)) { it / 8 } + fadeOut(tween(Motion.Short))
+        }
+    }
+}
+
 private val tabs = listOf(
     Tab(Routes.TODAY, "Hoje", R.drawable.ic_home),
     Tab(Routes.WEEK, "Semana", R.drawable.ic_calendar),
@@ -110,6 +154,7 @@ fun MyVitoryRoot(link: AppLink? = null, onLinkHandled: () -> Unit = {}) {
             }
         }
     }
+    val motion = LocalMotion.current
     val backStack by nav.currentBackStackEntryAsState()
     val route = backStack?.destination?.route
     val showBar = route == null || tabs.any { it.route == route }
@@ -174,7 +219,15 @@ fun MyVitoryRoot(link: AppLink? = null, onLinkHandled: () -> Unit = {}) {
                 }
             },
         ) { padding ->
-            NavHost(nav, startDestination = Routes.TODAY) {
+            val transitions = remember(motion) { ScreenTransitions(motion, tabs.map { it.route }.toSet()) }
+            NavHost(
+                nav,
+                startDestination = Routes.TODAY,
+                enterTransition = transitions.enter,
+                exitTransition = transitions.exit,
+                popEnterTransition = transitions.popEnter,
+                popExitTransition = transitions.popExit,
+            ) {
                 composable(Routes.TODAY) {
                     TodayScreen(
                         contentPadding = padding,

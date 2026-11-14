@@ -42,6 +42,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.myvitory.app.data.db.TemplateItemRow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.myvitory.app.R
@@ -122,6 +124,7 @@ fun TodayScreen(
                     Ticket(
                         "${state.doneCount}/${state.plannedCount}",
                         unit = "treinos na semana",
+                        animateValue = true,
                         tone = if (state.doneCount == state.plannedCount) TicketTone.Volt else TicketTone.Dim,
                         description = "${state.doneCount} de ${state.plannedCount} treinos na semana",
                     )
@@ -289,6 +292,9 @@ private fun TodayCard(
     val started = session.startedAt != null
     val sets = state.preview.sumOf { it.sets }
     val minutes = estimateMinutes(state.preview)
+    val haptics = LocalHapticFeedback.current
+    // Carimbo das etiquetas: uma vez por treino nesta execução do app.
+    val stamp = "hoje-${session.id}"
     Box {
         Surface(
             shape = RoundedCornerShape(28.dp),
@@ -321,17 +327,22 @@ private fun TodayCard(
                 DecisionPlate {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         PaperButton("Já treinei", onAlreadyDone, Modifier.weight(1f))
-                        PaperButton("Hoje não vai dar", onSkip, Modifier.weight(1f))
+                        PaperButton("Hoje não vai dar", { haptics.performHapticFeedback(HapticFeedbackType.Reject); onSkip() }, Modifier.weight(1f))
                     }
-                    PrimaryButton(if (started) "Continuar treino" else "Começar treino", onStart, Modifier.fillMaxWidth(), icon = R.drawable.ic_play)
+                    PrimaryButton(
+                        if (started) "Continuar treino" else "Começar treino",
+                        { haptics.performHapticFeedback(HapticFeedbackType.Confirm); onStart() },
+                        Modifier.fillMaxWidth(),
+                        icon = R.drawable.ic_play,
+                    )
                 }
             }
         }
         // Número antes do rótulo, como o contador da referência: sai da borda de cima do card.
         TicketStrip(Modifier.padding(start = 18.dp)) {
-            Ticket("${day.exerciseCount}", unit = "exercícios", description = "${day.exerciseCount} exercícios")
-            if (sets > 0) Ticket("$sets", unit = "séries", description = "$sets séries")
-            if (minutes > 0) Ticket("~$minutes", unit = "min", description = "cerca de $minutes minutos")
+            Ticket("${day.exerciseCount}", unit = "exercícios", description = "${day.exerciseCount} exercícios", stampKey = "$stamp-0", stampIndex = 0)
+            if (sets > 0) Ticket("$sets", unit = "séries", description = "$sets séries", stampKey = "$stamp-1", stampIndex = 1)
+            if (minutes > 0) Ticket("~$minutes", unit = "min", description = "cerca de $minutes minutos", stampKey = "$stamp-2", stampIndex = 2)
         }
     }
 }

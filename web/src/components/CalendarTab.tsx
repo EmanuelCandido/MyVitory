@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { addDays, DAYS_SHORT, dayLabel, dayOfWeek, isoDay, parseDay, shortDate, weekStart } from '../lib/format'
 import { dateChoice, setDate, type DateChoice } from '../sync/edits'
 import { LIMITS, type DayDoc, type PlanSnapshot } from '../sync/types'
@@ -195,11 +195,20 @@ function DateCell({
   const templates = Object.entries(plan.templates).sort(([, a], [, b]) => a.code.localeCompare(b.code))
   // Status do celular só quando diz algo além de "planejado".
   const chip = real && (real.status !== 'PLANNED' || real.movedTo || past) ? statusChip(real, today) : null
-  const pick = (next: DateChoice) => edit((p) => setDate(p, date, next))
+  const [justSet, setJustSet] = useState(false)
+  useEffect(() => {
+    if (!justSet) return
+    const id = window.setTimeout(() => setJustSet(false), 700)
+    return () => window.clearTimeout(id)
+  }, [justSet])
+  const pick = (next: DateChoice) => {
+    edit((p) => setDate(p, date, next))
+    setJustSet(true)
+  }
 
   return (
     <section
-      className={['day', isToday && 'today', past && 'past', shown.kind === 'closed' && 'closed', shown.tone && `accent-${shown.tone}`]
+      className={['day', isToday && 'today', past && 'past', shown.kind === 'closed' && 'closed', shown.tone && `accent-${shown.tone}`, justSet && 'just-set']
         .filter(Boolean)
         .join(' ')}
       aria-label={dayLabel(day)}
