@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Mesmos valores de Palette (ui/theme/Theme.kt): splash, ícone e cor da notificação. -->
+    <!-- Mesmos valores de Palette (ui/theme/Theme.kt): abertura, Selo V e cor da notificação. -->
     <color name="ground">#1A1A18</color>
     <color name="volt">#E5FF1F</color>
+    <color name="ink">#121211</color>
 </resources>

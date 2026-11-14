@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { signOut, type User } from 'firebase/auth'
 import { auth, configured, usingEmulators } from './firebase'
 import { useAthletes, useUser } from './lib/data'
+import { BrandMark, Wordmark } from './components/ui'
 import { AthletePage } from './pages/AthletePage'
 import { HomePage, LoginPage, SetupPage } from './pages/EntryPages'
 
@@ -42,10 +43,8 @@ function Signed({ user }: { user: User }) {
     <>
       <header className="topbar">
         <a className="brand" href="#/">
-          <span className="brand-mark" aria-hidden="true">
-            MV
-          </span>
-          MyVitory <small>painel do treinador</small>
+          <BrandMark />
+          <Wordmark /> <small>painel do treinador</small>
         </a>
         {athletes && athletes.length > 1 && (
           <select className="select" style={{ width: 'auto' }} value={athleteId ?? ''} onChange={(e) => open(e.target.value || null)} aria-label="Atleta">

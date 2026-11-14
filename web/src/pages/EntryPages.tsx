@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { GoogleAuthProvider, signInWithCredential, signInWithPopup, signInWithRedirect, type User } from 'firebase/auth'
 import { auth, google, usingEmulators } from '../firebase'
+import { BrandMark, Wordmark } from '../components/ui'
 import { normalizeCode, pairWithCode, type Athlete } from '../lib/data'
 import { relative } from '../lib/format'
 
@@ -10,10 +11,9 @@ export function LoginPage() {
     <div className="center-page">
       <div className="hero">
         <span className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            MV
-          </span>
-          MyVitory <small>painel do treinador</small>
+          {/* No login o selo entra carimbando, como na abertura do app. */}
+          <BrandMark size={44} className="stamp-in" />
+          <Wordmark /> <small>painel do treinador</small>
         </span>
         <h1>Monte e acompanhe o treino pelo navegador.</h1>
         <p className="muted" style={{ margin: 0 }}>

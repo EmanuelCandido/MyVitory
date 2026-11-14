@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/marca/myvitory-horizontal.png" alt="MyVitory" width="380"></p>
+
 # MyVitory
 
 **App Android de treino semanal que se reorganiza quando você falta, respeitando o descanso de cada
@@ -93,6 +95,10 @@ dos exercícios e o painel do treinador (opcional) usam internet.
 
 ### Visual, movimento e celulares fracos
 
+- **Marca (Selo V):** etiqueta volt de canto cortado, inclinada como adesivo, com um V em tinta que é V
+  de Vitory e ✓ de feito. O ícone do celular não tem fundo (só o selo sobre o papel de parede), tem versão
+  temática para o Android 13+ e entra carimbando na abertura do Android 12+. A geometria está em
+  `res/drawable/ic_launcher_foreground.xml`; o painel usa o mesmo desenho em `BrandMark`.
 - **Sistema Adesivo:** cores com papel fixo (volt é a ação principal, laranja é o que pede atenção agora,
   branco é a alternativa, azul é informação), JetBrains Mono para números e títulos e Barlow para leitura.
   Pílula recebe toque; etiqueta de canto cortado só mostra dado. Os tokens são os mesmos em
@@ -212,7 +218,7 @@ A cota gratuita é de 10.000 unidades por dia e cada busca custa 100. O app guar
 
 ## Status
 
-Versão 0.13.0, em preparação para o teste fechado na Play Store. O roteiro de publicação está em
+Versão 0.13.1, em preparação para o teste fechado na Play Store. O roteiro de publicação está em
 [`docs/play-store.md`](docs/play-store.md) e a política de privacidade em
 [`docs/politica-de-privacidade.md`](docs/politica-de-privacidade.md).
 

@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ícone da barra de status: monocromático, o mesmo "V" do ícone do app. -->
+<!-- Ícone da barra de status: só o V do Selo, cheio e reto (a etiqueta some em 24 dp). O sistema pinta de branco. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M5,12.5L10,18L19.5,6.5"
-        android:strokeWidth="2.6"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+    <group
+        android:scaleX="0.4607"
+        android:scaleY="0.4607"
+        android:translateX="-13.231"
+        android:translateY="-14.298">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M33.06,44.5L43.94,44.5L51.1,57.33L64.56,39.5L76.47,39.5L49.9,74.67Z" />
+    </group>
 </vector>

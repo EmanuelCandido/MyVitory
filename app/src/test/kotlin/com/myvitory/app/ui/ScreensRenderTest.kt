@@ -16,6 +16,26 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
 import com.myvitory.app.ui.theme.MyVitoryTheme
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.unit.dp
+import com.myvitory.app.R
 import java.io.File
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -86,6 +106,38 @@ class ScreensRenderTest {
         rule.waitUntilAtLeastOneExists(hasText("APLICAR") or hasText("PULAR TREINO PERDIDO"), timeoutMillis = 10_000)
         rule.waitForIdle()
         save("nova-semana")
+    }
+
+    /** O Selo V como o launcher desenha (fundo transparente) sobre papel de parede claro e escuro, mais o temático e a notificação. */
+    @Test
+    fun `renderiza o ícone do app`() {
+        rule.setContent {
+            Column(Modifier.testTag("icones").background(Color(0xFF888680)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    for (wallpaper in listOf(Color(0xFFE6E3DA), Color(0xFF2E3440), Color(0xFF4F7A5A))) {
+                        Box(Modifier.size(96.dp).background(wallpaper), Alignment.Center) {
+                            // Área visível do ícone adaptativo: 72 de 108, sem fundo.
+                            Image(painterResource(R.drawable.ic_launcher_foreground), null, Modifier.requiredSize(96.dp * 108 / 72))
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(96.dp).clip(CircleShape).background(Color(0xFF3D4A7A)), Alignment.Center) {
+                        Icon(painterResource(R.drawable.ic_launcher_monochrome), null, Modifier.requiredSize(144.dp), tint = Color(0xFFD9E0FF))
+                    }
+                    Box(Modifier.size(48.dp).background(Color(0xFF111111)), Alignment.Center) {
+                        Icon(painterResource(R.drawable.ic_notification), null, Modifier.size(24.dp), tint = Color.White)
+                    }
+                    Box(Modifier.size(24.dp).background(Color(0xFF111111)), Alignment.Center) {
+                        Icon(painterResource(R.drawable.ic_notification), null, Modifier.size(16.dp), tint = Color.White)
+                    }
+                }
+            }
+        }
+        val bitmap = rule.onNodeWithTag("icones").captureToImage().asAndroidBitmap()
+        val out = File("build/outputs/render/icone.png").apply { parentFile?.mkdirs() }
+        out.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        assertTrue(out.length() > 0)
     }
 
     private fun save(name: String) {

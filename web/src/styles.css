@@ -113,18 +113,9 @@ h1, h2, h3 { text-wrap: balance; }
 
 .brand { display: inline-flex; align-items: center; gap: 10px; font: 800 18px/1 var(--font-mono); letter-spacing: -0.01em; text-transform: uppercase; color: inherit; text-decoration: none; }
 .brand small { font: 400 13px var(--font);color: var(--text-muted); letter-spacing: 0; text-transform: none; }
-.brand-mark {
-  width: 30px;
-  height: 30px;
-  display: inline-grid;
-  place-items: center;
-  background: var(--volt);
-  color: var(--ink);
-  font: 800 12px/1 var(--font-mono);
-  clip-path: var(--chamfer);
-  transform: rotate(-6deg);
-  flex: none;
-}
+/* Selo V (components/ui.tsx BrandMark) e o nome com o V em volt. */
+.brand-mark { display: block; flex: none; overflow: visible; }
+.wordmark .v { color: var(--volt); }
 
 .topbar .spacer { flex: 1; }
 .topbar .select { width: auto; min-height: 38px; border-radius: 999px; padding: 4px 14px; font-weight: 600; }

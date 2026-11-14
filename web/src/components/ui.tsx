@@ -5,6 +5,30 @@ import { currentMotion, saveData } from '../lib/device'
 export type Tone = 'flame' | 'volt' | 'paper' | 'sky' | 'dim'
 
 /**
+ * Selo V: o mesmo desenho do ícone do app (res/drawable/ic_launcher_foreground.xml), na grade de 108.
+ * Etiqueta volt inclinada −6° com o V em tinta (V de Vitory e ✓ de feito).
+ */
+export function BrandMark({ size = 32, className = '' }: { size?: number; className?: string }) {
+  return (
+    <svg className={`brand-mark${className ? ` ${className}` : ''}`} width={size} height={size} viewBox="20 20 68 68" aria-hidden="true" focusable="false">
+      <g transform="rotate(-6 54 54)">
+        <path d="M36 27H72L81 36V72L72 81H36L27 72V36Z" fill="var(--volt)" />
+        <path d="M33.06 44.5H43.94L51.1 57.33L64.56 39.5H76.47L49.9 74.67Z" fill="var(--ink)" />
+      </g>
+    </svg>
+  )
+}
+
+/** Nome em mono caixa alta com o V do meio em volt, a ponte com o selo. */
+export function Wordmark() {
+  return (
+    <span className="wordmark">
+      My<span className="v">V</span>itory
+    </span>
+  )
+}
+
+/**
  * Etiqueta chanfrada: número grande e unidade pequena ("05 EXERC"). Só mostra dado, nunca recebe clique.
  * Com [stamp], entra como adesivo batido; [stamp] é a posição na faixa (70 ms entre cada).
  */

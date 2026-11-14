@@ -37,8 +37,8 @@ android {
         minSdk = 26
         targetSdk = 36
         // Cada envio à Play Store precisa de um versionCode maior que o anterior.
-        versionCode = 13
-        versionName = "0.13.0"
+        versionCode = 14
+        versionName = "0.13.1"
         buildConfigField("String", "YOUTUBE_API_KEY", "\"$youtubeApiKey\"")
         buildConfigField("String", "FIREBASE_API_KEY", "\"${firebaseProp("apiKey")}\"")
         buildConfigField("String", "FIREBASE_APP_ID", "\"${firebaseProp("appId")}\"")

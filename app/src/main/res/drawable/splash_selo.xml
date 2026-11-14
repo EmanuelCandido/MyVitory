@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Abertura do app (Android 12+): o Selo V entra carimbando, como as etiquetas das telas.
+  Escala 1,35 → 1 e giro −14° → −6° com passada (overshoot), 360 ms. Com as animações do sistema
+  desligadas, o Android mostra direto o estado final.
+-->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="108dp"
+            android:height="108dp"
+            android:viewportWidth="108"
+            android:viewportHeight="108">
+            <group
+                android:name="selo"
+                android:pivotX="54"
+                android:pivotY="54"
+                android:rotation="-6">
+                <path
+                    android:fillColor="@color/volt"
+                    android:pathData="M36,27L72,27L81,36L81,72L72,81L36,81L27,72L27,36Z" />
+                <path
+                    android:fillColor="@color/ink"
+                    android:pathData="M33.06,44.5L43.94,44.5L51.1,57.33L64.56,39.5L76.47,39.5L49.9,74.67Z" />
+            </group>
+        </vector>
+    </aapt:attr>
+    <target android:name="selo">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator
+                    android:duration="360"
+                    android:interpolator="@android:anim/overshoot_interpolator"
+                    android:propertyName="scaleX"
+                    android:valueFrom="1.35"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="360"
+                    android:interpolator="@android:anim/overshoot_interpolator"
+                    android:propertyName="scaleY"
+                    android:valueFrom="1.35"
+                    android:valueTo="1"
+                    android:valueType="floatType" />
+                <objectAnimator
+                    android:duration="360"
+                    android:interpolator="@android:anim/overshoot_interpolator"
+                    android:propertyName="rotation"
+                    android:valueFrom="-14"
+                    android:valueTo="-6"
+                    android:valueType="floatType" />
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>

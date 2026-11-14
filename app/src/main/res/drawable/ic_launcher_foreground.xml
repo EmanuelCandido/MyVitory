@@ -1,15 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- "V" em forma de check: o estado "feito" do app. Área segura do ícone adaptativo: 66dp centrais. -->
+<!--
+  Selo V: etiqueta volt de canto cortado, inclinada −6° como adesivo, com um V em tinta que é V de Vitory e ✓ de feito.
+  Grade de 108 do ícone adaptativo; o selo cabe no círculo seguro de 66 dp, então nenhuma máscara do launcher o corta.
+  O fundo do ícone é transparente (mipmap-anydpi/ic_launcher.xml): só o selo aparece sobre o papel de parede.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#00000000"
-        android:pathData="M36,52 L49,68 L73,38"
-        android:strokeWidth="9"
-        android:strokeColor="@color/volt"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:rotation="-6">
+        <path
+            android:fillColor="@color/volt"
+            android:pathData="M36,27L72,27L81,36L81,72L72,81L36,81L27,72L27,36Z" />
+        <path
+            android:fillColor="@color/ink"
+            android:pathData="M33.06,44.5L43.94,44.5L51.1,57.33L64.56,39.5L76.47,39.5L49.9,74.67Z" />
+    </group>
 </vector>
